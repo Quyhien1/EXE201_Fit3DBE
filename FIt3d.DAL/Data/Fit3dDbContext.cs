@@ -19,6 +19,12 @@ namespace FIt3d.DAL.Data
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
 
+        // Subscription DbSets
+        public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+        public DbSet<Subscription> Subscriptions { get; set; }
+        public DbSet<AIUsageLog> AIUsageLogs { get; set; }
+        public DbSet<Model> Models { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -138,6 +144,58 @@ namespace FIt3d.DAL.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            // SubscriptionPlan configuration
+            modelBuilder.Entity<SubscriptionPlan>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Price).HasColumnType("decimal(18,2)");
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+
+            // Subscription configuration
+            modelBuilder.Entity<Subscription>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.PaidAmount).HasColumnType("decimal(18,2)");
+                entity.HasQueryFilter(e => !e.IsDeleted);
+
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.Subscriptions)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.SubscriptionPlan)
+                    .WithMany(p => p.Subscriptions)
+                    .HasForeignKey(e => e.SubscriptionPlanId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // AIUsageLog configuration
+            modelBuilder.Entity<AIUsageLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasQueryFilter(e => !e.IsDeleted);
+
+                entity.HasOne(e => e.Subscription)
+                    .WithMany(s => s.AIUsageLogs)
+                    .HasForeignKey(e => e.SubscriptionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Model configuration
+            modelBuilder.Entity<Model>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.HasQueryFilter(e => !e.IsDeleted);
+
+                entity.HasOne(e => e.Subscription)
+                    .WithMany(s => s.Models)
+                    .HasForeignKey(e => e.SubscriptionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // Seed Data
             SeedData(modelBuilder);
         }
@@ -232,6 +290,93 @@ namespace FIt3d.DAL.Data
                     Description = "Fashion accessories to complete your look",
                     ImageUrl = "https://example.com/images/categories/accessories.jpg",
                     DisplayOrder = 4,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                }
+            );
+
+            // Seed Subscription Plans
+            var stylistProMonthly = Guid.Parse("eeeeeeee-1111-1111-1111-111111111111");
+            var stylistProYearly = Guid.Parse("eeeeeeee-2222-2222-2222-222222222222");
+            var b2bBasic = Guid.Parse("ffffffff-1111-1111-1111-111111111111");
+            var b2bPro = Guid.Parse("ffffffff-2222-2222-2222-222222222222");
+            var b2bEnterprise = Guid.Parse("ffffffff-3333-3333-3333-333333333333");
+
+            modelBuilder.Entity<SubscriptionPlan>().HasData(
+                // B2C Stylist Pro Plans
+                new SubscriptionPlan
+                {
+                    Id = stylistProMonthly,
+                    Name = "Stylist Pro Monthly",
+                    Description = "Gói Stylist Pro hàng tháng - AI ?? xu?t màu s?c & phong cách, ch?nh s?a model gi?i h?n",
+                    PlanType = PlanType.B2C_StylistPro,
+                    Price = 99000m,
+                    DurationInDays = 30,
+                    MaxModels = 5,
+                    MaxEditsPerModel = 10,
+                    MaxAIRequestsPerMonth = 50,
+                    HasAIFeature = true,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new SubscriptionPlan
+                {
+                    Id = stylistProYearly,
+                    Name = "Stylist Pro Yearly",
+                    Description = "Gói Stylist Pro n?m - Ti?t ki?m 20%, AI ?? xu?t không gi?i h?n, ch?nh s?a model nhi?u h?n",
+                    PlanType = PlanType.B2C_StylistPro,
+                    Price = 950000m,
+                    DurationInDays = 365,
+                    MaxModels = 20,
+                    MaxEditsPerModel = 30,
+                    MaxAIRequestsPerMonth = 200,
+                    HasAIFeature = true,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                // B2B Shop Plans
+                new SubscriptionPlan
+                {
+                    Id = b2bBasic,
+                    Name = "B2B Basic",
+                    Description = "Gói c? b?n cho shop - 50 model ph?i ??, 10 l?n ch?nh s?a/model",
+                    PlanType = PlanType.B2B_Shop,
+                    Price = 499000m,
+                    DurationInDays = 30,
+                    MaxModels = 50,
+                    MaxEditsPerModel = 10,
+                    MaxAIRequestsPerMonth = 0,
+                    HasAIFeature = false,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new SubscriptionPlan
+                {
+                    Id = b2bPro,
+                    Name = "B2B Pro",
+                    Description = "Gói Pro cho shop - 200 model ph?i ??, 20 l?n ch?nh s?a/model, h? tr? ?u tiên",
+                    PlanType = PlanType.B2B_Shop,
+                    Price = 1490000m,
+                    DurationInDays = 30,
+                    MaxModels = 200,
+                    MaxEditsPerModel = 20,
+                    MaxAIRequestsPerMonth = 0,
+                    HasAIFeature = false,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new SubscriptionPlan
+                {
+                    Id = b2bEnterprise,
+                    Name = "B2B Enterprise",
+                    Description = "Gói Enterprise cho shop - 1000 model ph?i ??, 50 l?n ch?nh s?a/model, API access",
+                    PlanType = PlanType.B2B_Shop,
+                    Price = 4990000m,
+                    DurationInDays = 30,
+                    MaxModels = 1000,
+                    MaxEditsPerModel = 50,
+                    MaxAIRequestsPerMonth = 0,
+                    HasAIFeature = false,
                     IsActive = true,
                     CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 }
