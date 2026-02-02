@@ -1,6 +1,5 @@
+using Fit3d.BLL.DTOs;
 using FIt3d.DAL.Entities;
-using FIt3d.DAL.Request.Auth;
-using FIt3d.DAL.Respond.Auth;
 
 namespace Fit3d.BLL.Interfaces
 {

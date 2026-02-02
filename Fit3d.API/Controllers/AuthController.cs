@@ -1,6 +1,5 @@
+using Fit3d.BLL.DTOs;
 using Fit3d.BLL.Interfaces;
-using FIt3d.DAL.Request.Auth;
-using FIt3d.DAL.Respond.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
