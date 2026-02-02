@@ -3,6 +3,7 @@ using System;
 using FIt3d.DAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FIt3d.DAL.Migrations
 {
     [DbContext(typeof(Fit3dDbContext))]
-    partial class Fit3dDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260124165648_Add3DModelColumns")]
+    partial class Add3DModelColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,54 +25,6 @@ namespace FIt3d.DAL.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("FIt3d.DAL.Entities.AIUsageLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("InputData")
-                        .HasColumnType("text");
-
-                    b.Property<string>("IpAddress")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsSuccess")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("OutputData")
-                        .HasColumnType("text");
-
-                    b.Property<int>("ProcessingTimeMs")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("RequestType")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("SubscriptionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SubscriptionId");
-
-                    b.ToTable("AIUsageLogs", "fit3d");
-                });
 
             modelBuilder.Entity("FIt3d.DAL.Entities.CartItem", b =>
                 {
@@ -219,69 +174,6 @@ namespace FIt3d.DAL.Migrations
                             IsDeleted = false,
                             Name = "Accessories"
                         });
-                });
-
-            modelBuilder.Entity("FIt3d.DAL.Entities.Model", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ConfigurationData")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("EditCount")
-                        .HasColumnType("integer");
-
-                    b.Property<long>("FileSizeBytes")
-                        .HasColumnType("bigint");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsPublic")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LinkedProductsData")
-                        .HasColumnType("text");
-
-                    b.Property<int>("MaxEditCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ModelFileUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<Guid>("SubscriptionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ThumbnailUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SubscriptionId");
-
-                    b.ToTable("Models", "fit3d");
                 });
 
             modelBuilder.Entity("FIt3d.DAL.Entities.Order", b =>
@@ -977,239 +869,6 @@ namespace FIt3d.DAL.Migrations
                         });
                 });
 
-            modelBuilder.Entity("FIt3d.DAL.Entities.RefreshToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Token")
-                        .IsUnique();
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("RefreshTokens", "fit3d");
-                });
-
-            modelBuilder.Entity("FIt3d.DAL.Entities.Subscription", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("AIRequestsResetDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("AIRequestsUsedThisMonth")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("AutoRenew")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("ModelsUsed")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("PaidAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("PaymentMethod")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("PaymentTransactionId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("SubscriptionPlanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SubscriptionPlanId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Subscriptions", "fit3d");
-                });
-
-            modelBuilder.Entity("FIt3d.DAL.Entities.SubscriptionPlan", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("DurationInDays")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("HasAIFeature")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("MaxAIRequestsPerMonth")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MaxEditsPerModel")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MaxModels")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<int>("PlanType")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SubscriptionPlans", "fit3d");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("eeeeeeee-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Gói Stylist Pro hàng tháng - AI ?? xu?t màu s?c & phong cách, ch?nh s?a model gi?i h?n",
-                            DurationInDays = 30,
-                            HasAIFeature = true,
-                            IsActive = true,
-                            IsDeleted = false,
-                            MaxAIRequestsPerMonth = 50,
-                            MaxEditsPerModel = 10,
-                            MaxModels = 5,
-                            Name = "Stylist Pro Monthly",
-                            PlanType = 0,
-                            Price = 99000m
-                        },
-                        new
-                        {
-                            Id = new Guid("eeeeeeee-2222-2222-2222-222222222222"),
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Gói Stylist Pro n?m - Ti?t ki?m 20%, AI ?? xu?t không gi?i h?n, ch?nh s?a model nhi?u h?n",
-                            DurationInDays = 365,
-                            HasAIFeature = true,
-                            IsActive = true,
-                            IsDeleted = false,
-                            MaxAIRequestsPerMonth = 200,
-                            MaxEditsPerModel = 30,
-                            MaxModels = 20,
-                            Name = "Stylist Pro Yearly",
-                            PlanType = 0,
-                            Price = 950000m
-                        },
-                        new
-                        {
-                            Id = new Guid("ffffffff-1111-1111-1111-111111111111"),
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Gói c? b?n cho shop - 50 model ph?i ??, 10 l?n ch?nh s?a/model",
-                            DurationInDays = 30,
-                            HasAIFeature = false,
-                            IsActive = true,
-                            IsDeleted = false,
-                            MaxAIRequestsPerMonth = 0,
-                            MaxEditsPerModel = 10,
-                            MaxModels = 50,
-                            Name = "B2B Basic",
-                            PlanType = 1,
-                            Price = 499000m
-                        },
-                        new
-                        {
-                            Id = new Guid("ffffffff-2222-2222-2222-222222222222"),
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Gói Pro cho shop - 200 model ph?i ??, 20 l?n ch?nh s?a/model, h? tr? ?u tiên",
-                            DurationInDays = 30,
-                            HasAIFeature = false,
-                            IsActive = true,
-                            IsDeleted = false,
-                            MaxAIRequestsPerMonth = 0,
-                            MaxEditsPerModel = 20,
-                            MaxModels = 200,
-                            Name = "B2B Pro",
-                            PlanType = 1,
-                            Price = 1490000m
-                        },
-                        new
-                        {
-                            Id = new Guid("ffffffff-3333-3333-3333-333333333333"),
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Gói Enterprise cho shop - 1000 model ph?i ??, 50 l?n ch?nh s?a/model, API access",
-                            DurationInDays = 30,
-                            HasAIFeature = false,
-                            IsActive = true,
-                            IsDeleted = false,
-                            MaxAIRequestsPerMonth = 0,
-                            MaxEditsPerModel = 50,
-                            MaxModels = 1000,
-                            Name = "B2B Enterprise",
-                            PlanType = 1,
-                            Price = 4990000m
-                        });
-                });
-
             modelBuilder.Entity("FIt3d.DAL.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1239,13 +898,6 @@ namespace FIt3d.DAL.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsVerified")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LogoUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1257,24 +909,8 @@ namespace FIt3d.DAL.Migrations
                     b.Property<int>("Role")
                         .HasColumnType("integer");
 
-                    b.Property<string>("ShopDescription")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("ShopName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("TaxCode")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("WebsiteUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
 
                     b.HasKey("Id");
 
@@ -1293,7 +929,6 @@ namespace FIt3d.DAL.Migrations
                             FullName = "Admin User",
                             IsActive = true,
                             IsDeleted = false,
-                            IsVerified = false,
                             PasswordHash = "AQAAAAIAAYagAAAAEJ8g1234567890abcdefghijklmnop",
                             Phone = "0901234567",
                             Role = 1
@@ -1307,7 +942,6 @@ namespace FIt3d.DAL.Migrations
                             FullName = "Nguyen Van A",
                             IsActive = true,
                             IsDeleted = false,
-                            IsVerified = false,
                             PasswordHash = "AQAAAAIAAYagAAAAEJ8g1234567890abcdefghijklmnop",
                             Phone = "0912345678",
                             Role = 0
@@ -1321,22 +955,10 @@ namespace FIt3d.DAL.Migrations
                             FullName = "Tran Thi B",
                             IsActive = true,
                             IsDeleted = false,
-                            IsVerified = false,
                             PasswordHash = "AQAAAAIAAYagAAAAEJ8g1234567890abcdefghijklmnop",
                             Phone = "0923456789",
                             Role = 0
                         });
-                });
-
-            modelBuilder.Entity("FIt3d.DAL.Entities.AIUsageLog", b =>
-                {
-                    b.HasOne("FIt3d.DAL.Entities.Subscription", "Subscription")
-                        .WithMany("AIUsageLogs")
-                        .HasForeignKey("SubscriptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Subscription");
                 });
 
             modelBuilder.Entity("FIt3d.DAL.Entities.CartItem", b =>
@@ -1356,17 +978,6 @@ namespace FIt3d.DAL.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("FIt3d.DAL.Entities.Model", b =>
-                {
-                    b.HasOne("FIt3d.DAL.Entities.Subscription", "Subscription")
-                        .WithMany("Models")
-                        .HasForeignKey("SubscriptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Subscription");
                 });
 
             modelBuilder.Entity("FIt3d.DAL.Entities.Order", b =>
@@ -1432,36 +1043,6 @@ namespace FIt3d.DAL.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("FIt3d.DAL.Entities.RefreshToken", b =>
-                {
-                    b.HasOne("FIt3d.DAL.Entities.User", "User")
-                        .WithMany("RefreshTokens")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("FIt3d.DAL.Entities.Subscription", b =>
-                {
-                    b.HasOne("FIt3d.DAL.Entities.SubscriptionPlan", "SubscriptionPlan")
-                        .WithMany("Subscriptions")
-                        .HasForeignKey("SubscriptionPlanId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("FIt3d.DAL.Entities.User", "User")
-                        .WithMany("Subscriptions")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("SubscriptionPlan");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("FIt3d.DAL.Entities.Category", b =>
                 {
                     b.Navigation("Products");
@@ -1483,27 +1064,11 @@ namespace FIt3d.DAL.Migrations
                     b.Navigation("ProductSizes");
                 });
 
-            modelBuilder.Entity("FIt3d.DAL.Entities.Subscription", b =>
-                {
-                    b.Navigation("AIUsageLogs");
-
-                    b.Navigation("Models");
-                });
-
-            modelBuilder.Entity("FIt3d.DAL.Entities.SubscriptionPlan", b =>
-                {
-                    b.Navigation("Subscriptions");
-                });
-
             modelBuilder.Entity("FIt3d.DAL.Entities.User", b =>
                 {
                     b.Navigation("CartItems");
 
                     b.Navigation("Orders");
-
-                    b.Navigation("RefreshTokens");
-
-                    b.Navigation("Subscriptions");
                 });
 #pragma warning restore 612, 618
         }
