@@ -2,8 +2,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Fit3d.API.Configuration;
-using Fit3d.API.Services.Interfaces;
+using Fit3d.BLL.Configuration;
+using Fit3d.BLL.Interfaces;
 using FIt3d.DAL.Data;
 using FIt3d.DAL.Entities;
 using FIt3d.DAL.Request.Auth;
@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Fit3d.API.Services.Implements
+namespace Fit3d.BLL.Services
 {
     public class AuthService : IAuthService
     {
@@ -190,11 +190,11 @@ namespace Fit3d.API.Services.Implements
             }
 
             refreshToken.IsDeleted = true;
-                refreshToken.UpdatedAt = DateTime.UtcNow;
+            refreshToken.UpdatedAt = DateTime.UtcNow;
 
-                await _context.SaveChangesAsync();
-                return true;
-            }
+            await _context.SaveChangesAsync();
+            return true;
+        }
 
         public async Task<User?> GetUserByIdAsync(Guid userId)
         {

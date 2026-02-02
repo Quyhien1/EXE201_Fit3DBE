@@ -1,7 +1,5 @@
 using System.Text;
-using Fit3d.API.Configuration;
-using Fit3d.API.Services.Implements;
-using Fit3d.API.Services.Interfaces;
+using Fit3d.BLL.Configuration;
 using FIt3d.DAL.Data;
 using FIt3d.DAL.Repositories.Implements;
 using FIt3d.DAL.Repositories.Interfaces;

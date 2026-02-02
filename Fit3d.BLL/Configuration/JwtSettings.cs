@@ -1,4 +1,4 @@
-namespace Fit3d.API.Configuration
+namespace Fit3d.BLL.Configuration
 {
     public class JwtSettings
     {

@@ -1,4 +1,4 @@
-using Fit3d.API.Services.Interfaces;
+using Fit3d.BLL.Interfaces;
 using FIt3d.DAL.Request.Auth;
 using FIt3d.DAL.Respond.Auth;
 using Microsoft.AspNetCore.Authorization;
