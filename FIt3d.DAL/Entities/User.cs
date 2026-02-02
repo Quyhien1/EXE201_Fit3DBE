@@ -53,10 +53,11 @@ namespace FIt3d.DAL.Entities
         public bool IsVerified { get; set; } = false;
 
         // Navigation properties
-        public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
-        public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
-        public virtual ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
-    }
+            public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+            public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+            public virtual ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
+            public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+        }
 
     public enum UserRole
     {
