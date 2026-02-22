@@ -178,10 +178,15 @@ namespace FIt3d.DAL.Data
                 entity.HasKey(e => e.Id);
                 entity.HasQueryFilter(e => !e.IsDeleted);
 
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.AIUsageLogs)
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
                 entity.HasOne(e => e.Subscription)
                     .WithMany(s => s.AIUsageLogs)
                     .HasForeignKey(e => e.SubscriptionId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             // Model configuration

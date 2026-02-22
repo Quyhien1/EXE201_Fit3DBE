@@ -57,6 +57,7 @@ namespace FIt3d.DAL.Entities
             public virtual ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
             public virtual ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
             public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+            public virtual ICollection<AIUsageLog> AIUsageLogs { get; set; } = new List<AIUsageLog>();
         }
 
     public enum UserRole
