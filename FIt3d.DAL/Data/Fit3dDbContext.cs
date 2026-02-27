@@ -25,6 +25,7 @@ namespace FIt3d.DAL.Data
         public DbSet<AIUsageLog> AIUsageLogs { get; set; }
         public DbSet<Model> Models { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -195,6 +196,24 @@ namespace FIt3d.DAL.Data
                     .WithMany(s => s.Models)
                     .HasForeignKey(e => e.SubscriptionId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Transaction configuration
+            modelBuilder.Entity<Transaction>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.HasQueryFilter(e => !e.IsDeleted);
+
+                entity.HasOne(e => e.Order)
+                    .WithMany()
+                    .HasForeignKey(e => e.OrderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             // RefreshToken configuration
