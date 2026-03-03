@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
+using Fit3d.BLL.Common;
 using Fit3d.BLL.DTOs;
 using FIt3d.DAL.Common;
 
@@ -15,5 +17,7 @@ namespace Fit3d.BLL.Interfaces
         Task<OrderDTO?> UpdateAsync(Guid id, UpdateOrderDTO updateDto);
         Task<bool> DeleteAsync(Guid id);
         Task<bool> HasUserPurchasedProductAsync(Guid userId, Guid productId);
+        Task<ServiceResponse> UpdateOrderToReturn(Guid orderId, CancellationToken cancellationToken = default);
+        Task<ServiceResponse> UpdateOrderToCancel(Guid orderId, CancellationToken cancellationToken = default);
     }
 }
