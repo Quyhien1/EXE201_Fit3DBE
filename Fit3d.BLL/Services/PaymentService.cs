@@ -75,8 +75,8 @@ namespace Fit3d.BLL.Services
                     amount: item.price,
                     description: "Thanh toán đơn hàng",
                     items: items,
-                    returnUrl: $"{_payOsSetings.ReturnUrl}?orderId={order.Id}",
-                    cancelUrl: $"{_payOsSetings.CancelUrl}?orderId={order.Id}",
+                    returnUrl: $"{_payOsSetings.OrderReturnUrl}?orderId={order.Id}",
+                    cancelUrl: $"{_payOsSetings.OrderCancelUrl}?orderId={order.Id}",
                     expiredAt: expiredAt
                 );
                 var response = await _payOs.createPaymentLink(data);
@@ -248,8 +248,8 @@ namespace Fit3d.BLL.Services
                     amount: item.price,
                     description: description,
                     items: items,
-                    returnUrl: $"{_payOsSetings.ReturnUrl}?subscriptionId={subscription.Id}",
-                    cancelUrl: $"{_payOsSetings.CancelUrl}?subscriptionId={subscription.Id}",
+                    returnUrl: $"{_payOsSetings.SubscriptionReturnUrl}?subscriptionId={subscription.Id}",
+                    cancelUrl: $"{_payOsSetings.SubscriptionCancelUrl}?subscriptionId={subscription.Id}",
                     expiredAt: expiredAt
                 );
                 var response = await _payOs.createPaymentLink(data);

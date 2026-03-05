@@ -47,6 +47,7 @@ namespace FIt3d.DAL.Entities
 
     public enum PaymentMethod
     {
-        PayOs = 0
+        PayOs = 0,
+        VnPay = 1
     }
 }
