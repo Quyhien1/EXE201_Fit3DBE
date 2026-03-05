@@ -1,4 +1,5 @@
 using FIt3d.DAL.Entities;
+using FIt3d.DAL.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace FIt3d.DAL.Data

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using FIt3d.DAL.Enums;
 
 namespace FIt3d.DAL.Entities
 {
@@ -37,17 +38,4 @@ namespace FIt3d.DAL.Entities
         public virtual User User { get; set; } = null!;
     }
 
-    public enum TransactionStatus
-    {
-        Pending = 0,
-        Return = 1,
-        Cancel = 2,
-        Fail = 3
     }
-
-    public enum PaymentMethod
-    {
-        PayOs = 0,
-        VnPay = 1
-    }
-}

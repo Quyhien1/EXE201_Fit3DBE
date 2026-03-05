@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using FIt3d.DAL.Enums;
 
 namespace FIt3d.DAL.Entities
 {
@@ -72,31 +73,4 @@ namespace FIt3d.DAL.Entities
         public virtual ICollection<Model> Models { get; set; } = new List<Model>();
     }
 
-    public enum SubscriptionStatus
-    {
-        /// <summary>
-        /// ?ang ch? thanh toán
-        /// </summary>
-        Pending = 0,
-
-        /// <summary>
-        /// ?ang ho?t ??ng
-        /// </summary>
-        Active = 1,
-
-        /// <summary>
-        /// ?ã h?t h?n
-        /// </summary>
-        Expired = 2,
-
-        /// <summary>
-        /// ?ã h?y
-        /// </summary>
-        Cancelled = 3,
-
-        /// <summary>
-        /// ?ã t?m d?ng
-        /// </summary>
-        Suspended = 4
     }
-}

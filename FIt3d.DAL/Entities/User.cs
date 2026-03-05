@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using FIt3d.DAL.Enums;
 
 namespace FIt3d.DAL.Entities
 {
@@ -59,12 +60,4 @@ namespace FIt3d.DAL.Entities
             public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
             public virtual ICollection<AIUsageLog> AIUsageLogs { get; set; } = new List<AIUsageLog>();
         }
-
-    public enum UserRole
-    {
-        Customer = 0,
-        Admin = 1,
-        Staff = 2,
-        Shop = 3
-    }
 }
