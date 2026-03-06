@@ -4,6 +4,7 @@ using FIt3d.DAL.Repositories.Implements;
 using FIt3d.DAL.Repositories.Interfaces;
 using Fit3d.API.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Fit3d.BLL.Configuration;
 using Fit3d.BLL.Interfaces;
 using Fit3d.BLL.Services;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,10 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.Configure<PayOsSetings>(builder.Configuration.GetSection("PayOsSetings"));
 
 var jwtKey = builder.Configuration["JwtSettings:SecretKey"];
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
@@ -66,7 +71,6 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IFileService, FileService>();
-builder.Services.AddScoped<IAIUsageLogService, AIUsageLogService>();
 
 // Configure Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();

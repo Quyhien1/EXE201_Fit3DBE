@@ -25,6 +25,7 @@ namespace FIt3d.DAL.Data
         public DbSet<AIUsageLog> AIUsageLogs { get; set; }
         public DbSet<Model> Models { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -202,6 +203,24 @@ namespace FIt3d.DAL.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // Transaction configuration
+            modelBuilder.Entity<Transaction>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.HasQueryFilter(e => !e.IsDeleted);
+
+                entity.HasOne(e => e.Order)
+                    .WithMany()
+                    .HasForeignKey(e => e.OrderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
             // RefreshToken configuration
             modelBuilder.Entity<RefreshToken>(entity =>
             {
@@ -321,6 +340,8 @@ namespace FIt3d.DAL.Data
             var b2bBasic = Guid.Parse("ffffffff-1111-1111-1111-111111111111");
             var b2bPro = Guid.Parse("ffffffff-2222-2222-2222-222222222222");
             var b2bEnterprise = Guid.Parse("ffffffff-3333-3333-3333-333333333333");
+            var basicPayPlanId = Guid.Parse("cccccccc-0001-0001-0001-cccccccccccc");
+            var premiumPayPlanId = Guid.Parse("dddddddd-0002-0002-0002-dddddddddddd");
 
             modelBuilder.Entity<SubscriptionPlan>().HasData(
                 // B2C Stylist Pro Plans
@@ -397,6 +418,36 @@ namespace FIt3d.DAL.Data
                     MaxEditsPerModel = 50,
                     MaxAIRequestsPerMonth = 0,
                     HasAIFeature = false,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new SubscriptionPlan
+                {
+                    Id = basicPayPlanId,
+                    Name = "Gói C? B?n",
+                    Description = "Gói c? b?n 100.000 VND/tháng - Tr?i nghi?m tính n?ng AI c? b?n",
+                    PlanType = PlanType.B2C_StylistPro,
+                    Price = 100000m,
+                    DurationInDays = 30,
+                    MaxModels = 3,
+                    MaxEditsPerModel = 5,
+                    MaxAIRequestsPerMonth = 20,
+                    HasAIFeature = true,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new SubscriptionPlan
+                {
+                    Id = premiumPayPlanId,
+                    Name = "Gói Nâng Cao",
+                    Description = "Gói nâng cao 250.000 VND/tháng - Tr?i nghi?m ??y ?? tính n?ng AI",
+                    PlanType = PlanType.B2C_StylistPro,
+                    Price = 250000m,
+                    DurationInDays = 30,
+                    MaxModels = 10,
+                    MaxEditsPerModel = 20,
+                    MaxAIRequestsPerMonth = 100,
+                    HasAIFeature = true,
                     IsActive = true,
                     CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 }

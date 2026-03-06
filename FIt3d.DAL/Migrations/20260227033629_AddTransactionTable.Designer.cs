@@ -3,6 +3,7 @@ using System;
 using FIt3d.DAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FIt3d.DAL.Migrations
 {
     [DbContext(typeof(Fit3dDbContext))]
-    partial class Fit3dDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260227033629_AddTransactionTable")]
+    partial class AddTransactionTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -29,9 +32,6 @@ namespace FIt3d.DAL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AIResponse")
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -41,6 +41,10 @@ namespace FIt3d.DAL.Migrations
 
                     b.Property<string>("InputData")
                         .HasColumnType("text");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -57,31 +61,15 @@ namespace FIt3d.DAL.Migrations
                     b.Property<int>("RequestType")
                         .HasColumnType("integer");
 
-                    b.Property<string>("SessionId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<Guid?>("SubscriptionId")
+                    b.Property<Guid>("SubscriptionId")
                         .HasColumnType("uuid");
-
-                    b.Property<int?>("TokensUsed")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("UserPrompt")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("SubscriptionId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("AIUsageLogs", "fit3d");
                 });
@@ -1222,38 +1210,6 @@ namespace FIt3d.DAL.Migrations
                             Name = "B2B Enterprise",
                             PlanType = 1,
                             Price = 4990000m
-                        },
-                        new
-                        {
-                            Id = new Guid("cccccccc-0001-0001-0001-cccccccccccc"),
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Gói c? b?n 100.000 VND/tháng - Tr?i nghi?m tính n?ng AI c? b?n",
-                            DurationInDays = 30,
-                            HasAIFeature = true,
-                            IsActive = true,
-                            IsDeleted = false,
-                            MaxAIRequestsPerMonth = 20,
-                            MaxEditsPerModel = 5,
-                            MaxModels = 3,
-                            Name = "Gói C? B?n",
-                            PlanType = 0,
-                            Price = 100000m
-                        },
-                        new
-                        {
-                            Id = new Guid("dddddddd-0002-0002-0002-dddddddddddd"),
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Gói nâng cao 250.000 VND/tháng - Tr?i nghi?m ??y ?? tính n?ng AI",
-                            DurationInDays = 30,
-                            HasAIFeature = true,
-                            IsActive = true,
-                            IsDeleted = false,
-                            MaxAIRequestsPerMonth = 100,
-                            MaxEditsPerModel = 20,
-                            MaxModels = 10,
-                            Name = "Gói Nâng Cao",
-                            PlanType = 0,
-                            Price = 250000m
                         });
                 });
 
@@ -1442,17 +1398,10 @@ namespace FIt3d.DAL.Migrations
                     b.HasOne("FIt3d.DAL.Entities.Subscription", "Subscription")
                         .WithMany("AIUsageLogs")
                         .HasForeignKey("SubscriptionId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("FIt3d.DAL.Entities.User", "User")
-                        .WithMany("AIUsageLogs")
-                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Subscription");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("FIt3d.DAL.Entities.CartItem", b =>
@@ -1632,8 +1581,6 @@ namespace FIt3d.DAL.Migrations
 
             modelBuilder.Entity("FIt3d.DAL.Entities.User", b =>
                 {
-                    b.Navigation("AIUsageLogs");
-
                     b.Navigation("CartItems");
 
                     b.Navigation("Orders");
