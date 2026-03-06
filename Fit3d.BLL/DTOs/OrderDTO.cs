@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using FIt3d.DAL.Entities;
+using FIt3d.DAL.Enums;
 
 namespace Fit3d.BLL.DTOs
 {

@@ -4,6 +4,7 @@ using Fit3d.BLL.DTOs;
 using Fit3d.BLL.Interfaces;
 using Fit3d.BLL.Utilities;
 using FIt3d.DAL.Entities;
+using FIt3d.DAL.Enums;
 using FIt3d.DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

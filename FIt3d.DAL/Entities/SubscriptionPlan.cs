@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using FIt3d.DAL.Enums;
 
 namespace FIt3d.DAL.Entities
 {
@@ -55,18 +56,5 @@ namespace FIt3d.DAL.Entities
 
         // Navigation properties
         public virtual ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
-    }
-
-    public enum PlanType
-    {
-        /// <summary>
-        /// Gói dành cho ng??i dùng cá nhân (B2C)
-        /// </summary>
-        B2C_StylistPro = 0,
-
-        /// <summary>
-        /// Gói dành cho shop/doanh nghi?p (B2B)
-        /// </summary>
-        B2B_Shop = 1
     }
 }

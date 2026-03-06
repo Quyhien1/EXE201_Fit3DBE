@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using FIt3d.DAL.Enums;
 
 namespace FIt3d.DAL.Entities
 {
@@ -53,22 +54,4 @@ namespace FIt3d.DAL.Entities
         public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     }
 
-    public enum OrderStatus
-    {
-        Pending = 0,
-        Confirmed = 1,
-        Processing = 2,
-        Shipped = 3,
-        Delivered = 4,
-        Cancelled = 5,
-        Returned = 6
     }
-
-    public enum PaymentStatus
-    {
-        Pending = 0,
-        Paid = 1,
-        Failed = 2,
-        Refunded = 3
-    }
-}

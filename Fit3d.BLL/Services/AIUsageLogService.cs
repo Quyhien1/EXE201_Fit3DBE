@@ -2,6 +2,7 @@ using Fit3d.BLL.DTOs;
 using Fit3d.BLL.Interfaces;
 using FIt3d.DAL.Data;
 using FIt3d.DAL.Entities;
+using FIt3d.DAL.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Fit3d.BLL.Services
