@@ -1,6 +1,7 @@
 using Fit3d.BLL.Common;
 using Fit3d.BLL.DTOs;
 using Fit3d.BLL.Interfaces;
+using FIt3d.DAL.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Fit3d.API.Controllers
@@ -40,6 +41,15 @@ namespace Fit3d.API.Controllers
         public async Task<IActionResult> PaymentCancel([FromQuery] Guid orderId, CancellationToken cancellationToken)
         {
             var result = await _paymentService.PaymentCancel(orderId, cancellationToken);
+            return result.Succeeded ? Ok(result) : BadRequest(result);
+        }
+
+        [HttpGet("subscription/plans")]
+        [ProducesResponseType(typeof(ResponseData<List<SubscriptionPlanResponse>>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ServiceResponse), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetSubscriptionPlans([FromQuery] PlanType planType, CancellationToken cancellationToken)
+        {
+            var result = await _paymentService.GetSubscriptionPlansByType(planType, cancellationToken);
             return result.Succeeded ? Ok(result) : BadRequest(result);
         }
 

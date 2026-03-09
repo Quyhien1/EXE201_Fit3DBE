@@ -203,6 +203,41 @@ namespace Fit3d.BLL.Services
             }
         }
 
+        public async Task<ServiceResponse> GetSubscriptionPlansByType(PlanType planType, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var plans = await _unitOfWork.GetRepository<SubscriptionPlan>()
+                    .GetListAsync(predicate: p => p.PlanType == planType && p.IsActive);
+
+                var result = plans.Select(p => new SubscriptionPlanResponse
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Description = p.Description,
+                    PlanType = p.PlanType,
+                    Price = p.Price,
+                    DurationInDays = p.DurationInDays,
+                    MaxModels = p.MaxModels,
+                    MaxEditsPerModel = p.MaxEditsPerModel,
+                    MaxAIRequestsPerMonth = p.MaxAIRequestsPerMonth,
+                    HasAIFeature = p.HasAIFeature,
+                }).ToList();
+
+                return new ResponseData<List<SubscriptionPlanResponse>>
+                {
+                    Succeeded = true,
+                    Message = "Lấy danh sách gói thành công!",
+                    Data = result
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting subscription plans for PlanType: {PlanType}", planType);
+                return new ServiceResponse { Succeeded = false, Message = "Lỗi khi lấy danh sách gói subscription!" };
+            }
+        }
+
         public async Task<ServiceResponse> CreateSubscriptionPayment(SubscriptionPaymentRequest request, CancellationToken cancellationToken = default)
         {
             try
@@ -214,6 +249,13 @@ namespace Fit3d.BLL.Services
                 {
                     _logger.LogError("Subscription plan not found: {PlanId}", request.SubscriptionPlanId);
                     return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy gói subscription!" };
+                }
+
+                if (plan.PlanType != request.PlanType)
+                {
+                    _logger.LogError("PlanType mismatch: requested {Requested}, actual {Actual}", request.PlanType, plan.PlanType);
+                    var expectedType = request.PlanType == PlanType.B2C_StylistPro ? "Gói cá nhân (Stylist Pro)" : "Gói shop (B2B)";
+                    return new ServiceResponse { Succeeded = false, Message = $"Gói được chọn không thuộc loại {expectedType}!" };
                 }
 
                 var user = await _unitOfWork.GetRepository<User>().GetByIdAsync(request.UserId);
