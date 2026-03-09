@@ -33,6 +33,16 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<PayOsSetings>(builder.Configuration.GetSection("PayOsSetings"));
 
+// Đọc appsettings mặc định
+builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
+// Đọc thêm file từ Secret của Render (nếu có)
+var renderSecretPath = "/etc/secrets/appsettings.json";
+if (File.Exists(renderSecretPath))
+{
+    builder.Configuration.AddJsonFile(renderSecretPath, optional: false, reloadOnChange: true);
+}
+
 var jwtKey = builder.Configuration["JwtSettings:SecretKey"];
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
 var jwtAudience = builder.Configuration["JwtSettings:Audience"];
