@@ -4,6 +4,7 @@ using FIt3d.DAL.Repositories.Implements;
 using FIt3d.DAL.Repositories.Interfaces;
 using Fit3d.API.Middlewares;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Fit3d.BLL.Configuration;
 using Fit3d.BLL.Interfaces;
 using Fit3d.BLL.Services;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,7 @@ builder.Services.AddDbContext<Fit3dDbContext>(options =>
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
+// Register Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
@@ -28,7 +30,24 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IFileService, FileService>();
+
+// Gộp cả AI và Payment vào chung
 builder.Services.AddScoped<IAIUsageLogService, AIUsageLogService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+// Cấu hình Setting
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.Configure<PayOsSetings>(builder.Configuration.GetSection("PayOsSetings"));
+
+// Đọc appsettings mặc định
+builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
+// Đọc thêm file từ Secret của Render (nếu có)
+var renderSecretPath = "/etc/secrets/appsettings.json";
+if (File.Exists(renderSecretPath))
+{
+    builder.Configuration.AddJsonFile(renderSecretPath, optional: false, reloadOnChange: true);
+}
 
 var jwtKey = builder.Configuration["JwtSettings:SecretKey"];
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];

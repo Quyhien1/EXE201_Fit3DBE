@@ -1,4 +1,5 @@
 using FIt3d.DAL.Entities;
+using FIt3d.DAL.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace FIt3d.DAL.Data
@@ -25,6 +26,7 @@ namespace FIt3d.DAL.Data
         public DbSet<AIUsageLog> AIUsageLogs { get; set; }
         public DbSet<Model> Models { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -202,6 +204,24 @@ namespace FIt3d.DAL.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // Transaction configuration
+            modelBuilder.Entity<Transaction>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.HasQueryFilter(e => !e.IsDeleted);
+
+                entity.HasOne(e => e.Order)
+                    .WithMany()
+                    .HasForeignKey(e => e.OrderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
             // RefreshToken configuration
             modelBuilder.Entity<RefreshToken>(entity =>
             {
@@ -223,9 +243,9 @@ namespace FIt3d.DAL.Data
         private void SeedData(ModelBuilder modelBuilder)
         {
             // Seed Users
-            var adminId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-            var customerId1 = Guid.Parse("22222222-2222-2222-2222-222222222222");
-            var customerId2 = Guid.Parse("33333333-3333-3333-3333-333333333333");
+            var adminId = Guid.Parse("ef0e2aff-84ad-4a3b-8486-6131eff68548");
+            var customerId1 = Guid.Parse("ef811dc4-971f-4db4-a7cf-72146baaa223");
+            var customerId2 = Guid.Parse("87209cbb-f1b3-45bb-a669-6c6741f6676f");
 
             modelBuilder.Entity<User>().HasData(
                 new User
@@ -267,10 +287,10 @@ namespace FIt3d.DAL.Data
             );
 
             // Seed Categories
-            var categoryTshirt = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
-            var categoryPants = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-            var categoryDress = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
-            var categoryAccessories = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var categoryTshirt = Guid.Parse("2174b77a-b7fe-4027-90a6-7f8bbd9cc062");
+            var categoryPants = Guid.Parse("7ef1156c-4412-436c-a7e5-1c0d11b7da91");
+            var categoryDress = Guid.Parse("f65c980b-aca4-40d4-8179-3acbe852d4fd");
+            var categoryAccessories = Guid.Parse("d94a333b-96ba-4390-b69c-f6244560b421");
 
             modelBuilder.Entity<Category>().HasData(
                 new Category
@@ -316,11 +336,13 @@ namespace FIt3d.DAL.Data
             );
 
             // Seed Subscription Plans
-            var stylistProMonthly = Guid.Parse("eeeeeeee-1111-1111-1111-111111111111");
-            var stylistProYearly = Guid.Parse("eeeeeeee-2222-2222-2222-222222222222");
-            var b2bBasic = Guid.Parse("ffffffff-1111-1111-1111-111111111111");
-            var b2bPro = Guid.Parse("ffffffff-2222-2222-2222-222222222222");
-            var b2bEnterprise = Guid.Parse("ffffffff-3333-3333-3333-333333333333");
+            var stylistProMonthly = Guid.Parse("d6bbc62a-2662-4160-8b83-44c76aae92ba");
+            var stylistProYearly = Guid.Parse("cffc1e89-46b3-4efa-a6d4-3fbcfe6f3f91");
+            var b2bBasic = Guid.Parse("9c1b53da-63f7-4b60-9160-9edd5eaafb56");
+            var b2bPro = Guid.Parse("8c00ef67-3541-499b-aaf0-7597b9465466");
+            var b2bEnterprise = Guid.Parse("ef5a64aa-00fb-4b57-a946-869dcf988331");
+            var basicPayPlanId = Guid.Parse("f5296a48-bd21-4341-a462-50d327d3ee72");
+            var premiumPayPlanId = Guid.Parse("9be6d44f-c0bd-4821-a0f7-657eb75a29fe");
 
             modelBuilder.Entity<SubscriptionPlan>().HasData(
                 // B2C Stylist Pro Plans
@@ -399,15 +421,45 @@ namespace FIt3d.DAL.Data
                     HasAIFeature = false,
                     IsActive = true,
                     CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new SubscriptionPlan
+                {
+                    Id = basicPayPlanId,
+                    Name = "Gói C? B?n",
+                    Description = "Gói c? b?n 100.000 VND/tháng - Tr?i nghi?m tính n?ng AI c? b?n",
+                    PlanType = PlanType.B2C_StylistPro,
+                    Price = 100000m,
+                    DurationInDays = 30,
+                    MaxModels = 3,
+                    MaxEditsPerModel = 5,
+                    MaxAIRequestsPerMonth = 20,
+                    HasAIFeature = true,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                },
+                new SubscriptionPlan
+                {
+                    Id = premiumPayPlanId,
+                    Name = "Gói Nâng Cao",
+                    Description = "Gói nâng cao 200.000 VND/tháng - Tr?i nghi?m ??y ?? tính n?ng AI",
+                    PlanType = PlanType.B2C_StylistPro,
+                    Price = 200000m,
+                    DurationInDays = 30,
+                    MaxModels = 10,
+                    MaxEditsPerModel = 20,
+                    MaxAIRequestsPerMonth = 100,
+                    HasAIFeature = true,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
                 }
             );
 
             // Seed Products
-            var product1 = Guid.Parse("11111111-aaaa-1111-aaaa-111111111111");
-            var product2 = Guid.Parse("22222222-aaaa-2222-aaaa-222222222222");
-            var product3 = Guid.Parse("33333333-bbbb-3333-bbbb-333333333333");
-            var product4 = Guid.Parse("44444444-cccc-4444-cccc-444444444444");
-            var product5 = Guid.Parse("55555555-dddd-5555-dddd-555555555555");
+            var product1 = Guid.Parse("cb2e4c53-0754-487d-9bc2-8a8e5a5a8ff7");
+            var product2 = Guid.Parse("d26859fa-798d-4341-b8c7-a2760b4b7522");
+            var product3 = Guid.Parse("3319290d-7bc6-4f66-955e-0bff16902e4f");
+            var product4 = Guid.Parse("a2561418-c8a0-4451-9caf-2cc58c625d1e");
+            var product5 = Guid.Parse("78575687-a6be-47fe-9fd9-7fa0dec32b66");
 
             modelBuilder.Entity<Product>().HasData(
                 new Product
@@ -495,49 +547,49 @@ namespace FIt3d.DAL.Data
             // Seed Product Sizes
             modelBuilder.Entity<ProductSize>().HasData(
                 // T-Shirt sizes
-                new ProductSize { Id = Guid.Parse("a1111111-1111-1111-1111-111111111111"), ProductId = product1, Size = "S", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductSize { Id = Guid.Parse("a2222222-2222-2222-2222-222222222222"), ProductId = product1, Size = "M", StockQuantity = 30, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductSize { Id = Guid.Parse("a3333333-3333-3333-3333-333333333333"), ProductId = product1, Size = "L", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductSize { Id = Guid.Parse("a4444444-4444-4444-4444-444444444444"), ProductId = product1, Size = "XL", StockQuantity = 20, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("6b476d78-3bb1-436c-afad-9521b8e48f50"), ProductId = product1, Size = "S", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("e626bf6b-d999-459b-9cff-82271cad1b48"), ProductId = product1, Size = "M", StockQuantity = 30, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("7072a38f-5eda-4d27-8df3-d26aff252d35"), ProductId = product1, Size = "L", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("3a4efbb6-f308-4cae-ba63-3beb600ba00c"), ProductId = product1, Size = "XL", StockQuantity = 20, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
                 // Polo shirt sizes
-                new ProductSize { Id = Guid.Parse("b1111111-1111-1111-1111-111111111111"), ProductId = product2, Size = "S", StockQuantity = 20, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductSize { Id = Guid.Parse("b2222222-2222-2222-2222-222222222222"), ProductId = product2, Size = "M", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductSize { Id = Guid.Parse("b3333333-3333-3333-3333-333333333333"), ProductId = product2, Size = "L", StockQuantity = 20, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("4bc01d6a-9083-4c4e-bf05-b46fd6f3d890"), ProductId = product2, Size = "S", StockQuantity = 20, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("d5bcdd99-b3a6-4c33-9886-ca5e643bf0a1"), ProductId = product2, Size = "M", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("873dbef2-761a-4010-8e71-1637b791603d"), ProductId = product2, Size = "L", StockQuantity = 20, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
                 // Jeans sizes
-                new ProductSize { Id = Guid.Parse("c1111111-1111-1111-1111-111111111111"), ProductId = product3, Size = "28", StockQuantity = 10, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductSize { Id = Guid.Parse("c2222222-2222-2222-2222-222222222222"), ProductId = product3, Size = "30", StockQuantity = 15, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductSize { Id = Guid.Parse("c3333333-3333-3333-3333-333333333333"), ProductId = product3, Size = "32", StockQuantity = 15, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductSize { Id = Guid.Parse("c4444444-4444-4444-4444-444444444444"), ProductId = product3, Size = "34", StockQuantity = 10, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("4dbd716c-8099-47ba-9062-97638f61d4e6"), ProductId = product3, Size = "28", StockQuantity = 10, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("8ee03cf8-12ae-4040-933b-8d4fa1893131"), ProductId = product3, Size = "30", StockQuantity = 15, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("5348d1b0-aa23-45d9-980e-bab1eba81b3b"), ProductId = product3, Size = "32", StockQuantity = 15, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("78f7af9d-961b-4ba9-8b20-20ae118b16c6"), ProductId = product3, Size = "34", StockQuantity = 10, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
                 // Dress sizes
-                new ProductSize { Id = Guid.Parse("d1111111-1111-1111-1111-111111111111"), ProductId = product4, Size = "S", StockQuantity = 10, CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductSize { Id = Guid.Parse("d2222222-2222-2222-2222-222222222222"), ProductId = product4, Size = "M", StockQuantity = 12, CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductSize { Id = Guid.Parse("d3333333-3333-3333-3333-333333333333"), ProductId = product4, Size = "L", StockQuantity = 8, CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc) }
+                new ProductSize { Id = Guid.Parse("666c92f7-b4f3-40c0-a8ee-bf49ecf1deef"), ProductId = product4, Size = "S", StockQuantity = 10, CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("5b84b9dc-7523-439d-afd6-d7bdfbde772c"), ProductId = product4, Size = "M", StockQuantity = 12, CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductSize { Id = Guid.Parse("2f9c198c-f08e-4227-9700-4ec8b06f73ea"), ProductId = product4, Size = "L", StockQuantity = 8, CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc) }
             );
 
             // Seed Product Colors
             modelBuilder.Entity<ProductColor>().HasData(
                 // T-Shirt colors
-                new ProductColor { Id = Guid.Parse("e1111111-1111-1111-1111-111111111111"), ProductId = product1, ColorName = "White", ColorCode = "#FFFFFF", StockQuantity = 35, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductColor { Id = Guid.Parse("e2222222-2222-2222-2222-222222222222"), ProductId = product1, ColorName = "Black", ColorCode = "#000000", StockQuantity = 35, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductColor { Id = Guid.Parse("e3333333-3333-3333-3333-333333333333"), ProductId = product1, ColorName = "Navy Blue", ColorCode = "#000080", StockQuantity = 30, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductColor { Id = Guid.Parse("a289b4b2-2cfa-4aea-969a-b53baa3a6ede"), ProductId = product1, ColorName = "White", ColorCode = "#FFFFFF", StockQuantity = 35, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductColor { Id = Guid.Parse("2fa71da7-5c2f-4f7e-8e92-207d3aa2df92"), ProductId = product1, ColorName = "Black", ColorCode = "#000000", StockQuantity = 35, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductColor { Id = Guid.Parse("872267f3-eeb6-46ae-82cd-8077aeadabbf"), ProductId = product1, ColorName = "Navy Blue", ColorCode = "#000080", StockQuantity = 30, CreatedAt = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc) },
                 // Polo colors
-                new ProductColor { Id = Guid.Parse("f1111111-1111-1111-1111-111111111111"), ProductId = product2, ColorName = "White", ColorCode = "#FFFFFF", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductColor { Id = Guid.Parse("f2222222-2222-2222-2222-222222222222"), ProductId = product2, ColorName = "Light Blue", ColorCode = "#ADD8E6", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductColor { Id = Guid.Parse("f3333333-3333-3333-3333-333333333333"), ProductId = product2, ColorName = "Pink", ColorCode = "#FFC0CB", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductColor { Id = Guid.Parse("509b2af9-8024-4dbf-806a-b5880a836088"), ProductId = product2, ColorName = "White", ColorCode = "#FFFFFF", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductColor { Id = Guid.Parse("29c61d39-039e-485c-99ff-265a024f82c8"), ProductId = product2, ColorName = "Light Blue", ColorCode = "#ADD8E6", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductColor { Id = Guid.Parse("8ef84190-3522-48da-95af-96735fab3301"), ProductId = product2, ColorName = "Pink", ColorCode = "#FFC0CB", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc) },
                 // Jeans colors
-                new ProductColor { Id = Guid.Parse("11111111-2222-1111-1111-111111111111"), ProductId = product3, ColorName = "Blue Wash", ColorCode = "#4169E1", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductColor { Id = Guid.Parse("22222222-2222-1111-1111-111111111111"), ProductId = product3, ColorName = "Dark Wash", ColorCode = "#191970", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductColor { Id = Guid.Parse("ac4541e7-ae1b-42c9-9912-29d77f0a0453"), ProductId = product3, ColorName = "Blue Wash", ColorCode = "#4169E1", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductColor { Id = Guid.Parse("99955166-1bc8-413c-bb33-c1a16a2269e6"), ProductId = product3, ColorName = "Dark Wash", ColorCode = "#191970", StockQuantity = 25, CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc) },
                 // Dress colors
-                new ProductColor { Id = Guid.Parse("33333333-2222-1111-1111-111111111111"), ProductId = product4, ColorName = "Floral Pink", ColorCode = "#FFB6C1", StockQuantity = 15, CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductColor { Id = Guid.Parse("44444444-2222-1111-1111-111111111111"), ProductId = product4, ColorName = "Floral Blue", ColorCode = "#87CEEB", StockQuantity = 15, CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductColor { Id = Guid.Parse("f0ed1a32-6a07-486c-ae4c-3648dd7bf4d4"), ProductId = product4, ColorName = "Floral Pink", ColorCode = "#FFB6C1", StockQuantity = 15, CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductColor { Id = Guid.Parse("ee72276f-52dd-4400-9402-2b3e2d9f2eb7"), ProductId = product4, ColorName = "Floral Blue", ColorCode = "#87CEEB", StockQuantity = 15, CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc) },
                 // Belt colors
-                new ProductColor { Id = Guid.Parse("55555555-2222-1111-1111-111111111111"), ProductId = product5, ColorName = "Brown", ColorCode = "#8B4513", StockQuantity = 30, CreatedAt = new DateTime(2024, 2, 5, 0, 0, 0, DateTimeKind.Utc) },
-                new ProductColor { Id = Guid.Parse("66666666-2222-1111-1111-111111111111"), ProductId = product5, ColorName = "Black", ColorCode = "#000000", StockQuantity = 30, CreatedAt = new DateTime(2024, 2, 5, 0, 0, 0, DateTimeKind.Utc) }
+                new ProductColor { Id = Guid.Parse("6493149e-6c21-4f3b-9ae2-40ac2698d7a4"), ProductId = product5, ColorName = "Brown", ColorCode = "#8B4513", StockQuantity = 30, CreatedAt = new DateTime(2024, 2, 5, 0, 0, 0, DateTimeKind.Utc) },
+                new ProductColor { Id = Guid.Parse("c29c562c-6432-4add-a1fc-fbbcca40258d"), ProductId = product5, ColorName = "Black", ColorCode = "#000000", StockQuantity = 30, CreatedAt = new DateTime(2024, 2, 5, 0, 0, 0, DateTimeKind.Utc) }
             );
 
             // Seed Orders
-            var order1 = Guid.Parse("aaaa1111-1111-1111-1111-111111111111");
-            var order2 = Guid.Parse("bbbb2222-2222-2222-2222-222222222222");
+            var order1 = Guid.Parse("abc47c23-b9b5-495f-ad2d-67d0b8b598a4");
+            var order2 = Guid.Parse("861f041d-6422-4734-a615-6ec5a95683ac");
 
             modelBuilder.Entity<Order>().HasData(
                 new Order
@@ -584,7 +636,7 @@ namespace FIt3d.DAL.Data
             modelBuilder.Entity<OrderItem>().HasData(
                 new OrderItem
                 {
-                    Id = Guid.Parse("01111111-1111-1111-1111-111111111111"),
+                    Id = Guid.Parse("f43272b8-57f2-4c6e-8a4a-068a33beffa2"),
                     OrderId = order1,
                     ProductId = product1,
                     Quantity = 2,
@@ -596,7 +648,7 @@ namespace FIt3d.DAL.Data
                 },
                 new OrderItem
                 {
-                    Id = Guid.Parse("02222222-2222-2222-2222-222222222222"),
+                    Id = Guid.Parse("1fb2f6fe-9474-47d1-a0b7-fc70834e3a70"),
                     OrderId = order1,
                     ProductId = product5,
                     Quantity = 1,
@@ -608,7 +660,7 @@ namespace FIt3d.DAL.Data
                 },
                 new OrderItem
                 {
-                    Id = Guid.Parse("03333333-3333-3333-3333-333333333333"),
+                    Id = Guid.Parse("d423bc83-9867-4990-af10-2787d2eec805"),
                     OrderId = order2,
                     ProductId = product3,
                     Quantity = 1,
@@ -620,7 +672,7 @@ namespace FIt3d.DAL.Data
                 },
                 new OrderItem
                 {
-                    Id = Guid.Parse("04444444-4444-4444-4444-444444444444"),
+                    Id = Guid.Parse("e1456c51-45da-45df-a394-80d3ff068395"),
                     OrderId = order2,
                     ProductId = product4,
                     Quantity = 1,
@@ -636,7 +688,7 @@ namespace FIt3d.DAL.Data
             modelBuilder.Entity<CartItem>().HasData(
                 new CartItem
                 {
-                    Id = Guid.Parse("ca111111-1111-1111-1111-111111111111"),
+                    Id = Guid.Parse("397325b0-8306-47fb-876a-2167c7559b7a"),
                     UserId = customerId1,
                     ProductId = product2,
                     Quantity = 1,
@@ -646,7 +698,7 @@ namespace FIt3d.DAL.Data
                 },
                 new CartItem
                 {
-                    Id = Guid.Parse("ca222222-2222-2222-2222-222222222222"),
+                    Id = Guid.Parse("641f6db7-0163-4477-a8f5-4eb0064d1a68"),
                     UserId = customerId2,
                     ProductId = product1,
                     Quantity = 3,

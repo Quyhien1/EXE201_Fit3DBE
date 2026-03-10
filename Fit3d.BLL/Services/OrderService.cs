@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Fit3d.BLL.Common;
 using Fit3d.BLL.DTOs;
 using Fit3d.BLL.Interfaces;
 using FIt3d.DAL.Common;
 using FIt3d.DAL.Entities;
+using FIt3d.DAL.Enums;
 using FIt3d.DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -165,6 +168,36 @@ namespace Fit3d.BLL.Services
             );
 
             return await query.AnyAsync(o => o.OrderItems.Any(oi => oi.ProductId == productId));
+        }
+
+        public async Task<ServiceResponse> UpdateOrderToReturn(Guid orderId, CancellationToken cancellationToken = default)
+        {
+            var order = await _orderRepository.GetByIdAsync(orderId);
+            if (order == null || order.IsDeleted)
+                return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy đơn hàng!" };
+
+            order.PaymentStatus = PaymentStatus.Paid;
+            order.Status = OrderStatus.Confirmed;
+            order.UpdatedAt = DateTime.UtcNow;
+            _orderRepository.UpdateAsync(order);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResponse { Succeeded = true, Message = "Đơn hàng đã được xác nhận thanh toán!" };
+        }
+
+        public async Task<ServiceResponse> UpdateOrderToCancel(Guid orderId, CancellationToken cancellationToken = default)
+        {
+            var order = await _orderRepository.GetByIdAsync(orderId);
+            if (order == null || order.IsDeleted)
+                return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy đơn hàng!" };
+
+            order.PaymentStatus = PaymentStatus.Failed;
+            order.Status = OrderStatus.Cancelled;
+            order.UpdatedAt = DateTime.UtcNow;
+            _orderRepository.UpdateAsync(order);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new ServiceResponse { Succeeded = true, Message = "Đơn hàng đã bị hủy!" };
         }
 
         private static OrderDTO ToDTO(Order entity)
