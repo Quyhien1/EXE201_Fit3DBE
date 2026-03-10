@@ -34,6 +34,7 @@ builder.Services.AddScoped<IFileService, FileService>();
 // Gộp cả AI và Payment vào chung
 builder.Services.AddScoped<IAIUsageLogService, AIUsageLogService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 
 // Cấu hình Setting
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
