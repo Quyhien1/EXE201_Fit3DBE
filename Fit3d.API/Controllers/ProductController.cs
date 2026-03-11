@@ -40,14 +40,14 @@ namespace Fit3d.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateProductDTO createDto)
+        public async Task<IActionResult> Create([FromForm] CreateProductDTO createDto)
         {
             var result = await _service.CreateAsync(createDto);
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProductDTO updateDto)
+        public async Task<IActionResult> Update(Guid id, [FromForm] UpdateProductDTO updateDto)
         {
             var result = await _service.UpdateAsync(id, updateDto);
             if (result == null) return NotFound();
@@ -61,7 +61,6 @@ namespace Fit3d.API.Controllers
             if (!result) return NotFound();
             return NoContent();
         }
-
 
         [HttpPost("{id}/colors")]
         public async Task<IActionResult> AddColor(Guid id, [FromBody] CreateProductColorDTO colorDto)

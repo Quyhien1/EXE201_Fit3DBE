@@ -71,6 +71,24 @@ namespace Fit3d.BLL.Services
 
         public async Task<ProductDTO> CreateAsync(CreateProductDTO createDto)
         {
+            string? finalImageUrl = createDto.ImageUrl;
+            if (createDto.ImageFile != null && createDto.ImageFile.Length > 0)
+            {
+                finalImageUrl = await _fileService.SaveFileAsync(createDto.ImageFile, "products");
+            }
+
+            string? finalModelPath = createDto.ModelFilePath;
+            if (createDto.ModelFile != null && createDto.ModelFile.Length > 0)
+            {
+                finalModelPath = await _fileService.SaveFileAsync(createDto.ModelFile, "source-models");
+            }
+
+            string? finalPreviewPath = createDto.PreviewModelPath;
+            if (createDto.PreviewModelFile != null && createDto.PreviewModelFile.Length > 0)
+            {
+                finalPreviewPath = await _fileService.SaveFileAsync(createDto.PreviewModelFile, "source-models");
+            }
+
             var entity = new Product
             {
                 Id = Guid.NewGuid(),
@@ -80,10 +98,9 @@ namespace Fit3d.BLL.Services
                 SalePrice = createDto.SalePrice,
                 SKU = createDto.SKU,
                 Brand = createDto.Brand,
-                ImageUrl = createDto.ImageUrl,
-                ModelFilePath = createDto.ModelFilePath,
-                PreviewModelPath = createDto.PreviewModelPath,
-
+                ImageUrl = finalImageUrl,
+                ModelFilePath = finalModelPath,
+                PreviewModelPath = finalPreviewPath,
                 StockQuantity = createDto.StockQuantity,
                 IsActive = createDto.IsActive,
                 IsFeatured = createDto.IsFeatured,
@@ -129,6 +146,7 @@ namespace Fit3d.BLL.Services
 
             return ToDTO(entity);
         }
+
         public async Task<ProductDTO?> UpdateAsync(Guid id, UpdateProductDTO updateDto)
         {
             var entity = await _productRepository.SingleOrDefaultAsync(
@@ -138,13 +156,35 @@ namespace Fit3d.BLL.Services
 
             if (entity == null) return null;
 
+            string? finalImageUrl = updateDto.ImageUrl;
+            if (updateDto.ImageFile != null && updateDto.ImageFile.Length > 0)
+            {
+                finalImageUrl = await _fileService.SaveFileAsync(updateDto.ImageFile, "products");
+            }
+
+            string? finalModelPath = updateDto.ModelFilePath;
+            if (updateDto.ModelFile != null && updateDto.ModelFile.Length > 0)
+            {
+                finalModelPath = await _fileService.SaveFileAsync(updateDto.ModelFile, "source-models");
+            }
+
+            string? finalPreviewPath = updateDto.PreviewModelPath;
+            if (updateDto.PreviewModelFile != null && updateDto.PreviewModelFile.Length > 0)
+            {
+                finalPreviewPath = await _fileService.SaveFileAsync(updateDto.PreviewModelFile, "source-models");
+            }
+
             entity.Name = updateDto.Name;
             entity.Description = updateDto.Description;
             entity.Price = updateDto.Price;
             entity.SalePrice = updateDto.SalePrice;
             entity.SKU = updateDto.SKU;
             entity.Brand = updateDto.Brand;
-            entity.ImageUrl = updateDto.ImageUrl;
+
+            if (finalImageUrl != null) entity.ImageUrl = finalImageUrl;
+            if (finalModelPath != null) entity.ModelFilePath = finalModelPath;
+            if (finalPreviewPath != null) entity.PreviewModelPath = finalPreviewPath;
+
             entity.StockQuantity = updateDto.StockQuantity;
             entity.IsActive = updateDto.IsActive;
             entity.IsFeatured = updateDto.IsFeatured;

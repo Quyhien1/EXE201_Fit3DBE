@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Http; 
+using Microsoft.AspNetCore.Http;
 
 namespace Fit3d.BLL.DTOs
 {
@@ -80,10 +80,17 @@ namespace Fit3d.BLL.DTOs
         [MaxLength(100)]
         public string? Brand { get; set; }
 
+        public IFormFile? ImageFile { get; set; }
+
         [MaxLength(500)]
         public string? ImageUrl { get; set; }
 
+        public IFormFile? ModelFile { get; set; }
+
         public string? ModelFilePath { get; set; }
+
+        public IFormFile? PreviewModelFile { get; set; }
+
         public string? PreviewModelPath { get; set; }
 
         public int StockQuantity { get; set; } = 0;
@@ -119,8 +126,18 @@ namespace Fit3d.BLL.DTOs
         [MaxLength(100)]
         public string? Brand { get; set; }
 
+        public IFormFile? ImageFile { get; set; }
+
         [MaxLength(500)]
         public string? ImageUrl { get; set; }
+
+        public IFormFile? ModelFile { get; set; }
+
+        public string? ModelFilePath { get; set; }
+
+        public IFormFile? PreviewModelFile { get; set; }
+
+        public string? PreviewModelPath { get; set; }
 
         public int StockQuantity { get; set; }
 
