@@ -16,6 +16,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Update="Templates\ForgotPasswordEmailTemplate.html">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	    <TargetPath>Templates\ForgotPasswordEmailTemplate.html</TargetPath>
+	  </None>
+	</ItemGroup>
+
+	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 	</ItemGroup>
 
@@ -26,7 +33,10 @@
 	<ItemGroup>
 		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
 		<PackageReference Include="CloudinaryDotNet" Version="1.28.0" />
+		<PackageReference Include="MailKit" Version="4.8.0" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+		<PackageReference Include="MimeKit" Version="4.15.1" />
+		<PackageReference Include="Otp.NET" Version="1.4.0" />
 		<PackageReference Include="payOS" Version="1.0.9" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
 	</ItemGroup>

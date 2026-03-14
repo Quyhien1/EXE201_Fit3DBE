@@ -18,11 +18,19 @@ namespace Fit3d.BLL.Services
     {
         private readonly Fit3dDbContext _context;
         private readonly JwtSettings _jwtSettings;
+        private readonly IOtpService _otpService;
+        private readonly IEmailService _emailService;
 
-        public AuthService(Fit3dDbContext context, IOptions<JwtSettings> jwtSettings)
+        public AuthService(
+            Fit3dDbContext context,
+            IOptions<JwtSettings> jwtSettings,
+            IOtpService otpService,
+            IEmailService emailService)
         {
             _context = context;
             _jwtSettings = jwtSettings.Value;
+            _otpService = otpService;
+            _emailService = emailService;
         }
 
         public async Task<LoginResponse> LoginAsync(LoginRequest request, string? ipAddress = null)
@@ -200,6 +208,101 @@ namespace Fit3d.BLL.Services
         {
             return await _context.Users
                 .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
+        }
+
+        public async Task<ForgotPasswordResponse> ForgotPasswordAsync(string email)
+        {
+            var normalizedEmail = email.Trim().ToLower();
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail && !u.IsDeleted && u.IsActive);
+
+            if (user == null)
+            {
+                return new ForgotPasswordResponse
+                {
+                    Success = false,
+                    Message = "Email does not exist"
+                };
+            }
+
+            var otpCode = await _otpService.GenerateOtpAsync(user.Email);
+
+            var subject = "Fit3d OTP for password reset";
+            var body = await BuildForgotPasswordEmailBodyAsync(user.FullName, otpCode);
+
+            await _emailService.SendEmailAsync(user.Email, subject, body);
+
+            return new ForgotPasswordResponse
+            {
+                Success = true,
+                Message = "OTP has been sent to your email"
+            };
+        }
+
+        public async Task<ForgotPasswordResponse> ResetPasswordWithOtpAsync(string email, string otp, string newPassword)
+        {
+            var normalizedEmail = email.Trim().ToLower();
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail && !u.IsDeleted && u.IsActive);
+
+            if (user == null)
+            {
+                return new ForgotPasswordResponse
+                {
+                    Success = false,
+                    Message = "Email does not exist"
+                };
+            }
+
+            var isOtpValid = await _otpService.VerifyOtpAsync(user.Email, otp);
+            if (!isOtpValid)
+            {
+                return new ForgotPasswordResponse
+                {
+                    Success = false,
+                    Message = "Invalid or expired OTP"
+                };
+            }
+
+            user.PasswordHash = HashPassword(newPassword);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var userRefreshTokens = await _context.RefreshTokens
+                .Where(x => x.UserId == user.Id && !x.IsDeleted)
+                .ToListAsync();
+
+            foreach (var refreshToken in userRefreshTokens)
+            {
+                refreshToken.IsDeleted = true;
+                refreshToken.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return new ForgotPasswordResponse
+            {
+                Success = true,
+                Message = "Password changed successfully"
+            };
+        }
+
+        private static async Task<string> BuildForgotPasswordEmailBodyAsync(string fullName, string otpCode)
+        {
+            var templatePath = Path.Combine(AppContext.BaseDirectory, "Templates", "ForgotPasswordEmailTemplate.html");
+            var fallbackTemplatePath = Path.Combine(AppContext.BaseDirectory, "ForgotPasswordEmailTemplate.html");
+
+            var html = File.Exists(templatePath)
+                ? await File.ReadAllTextAsync(templatePath)
+                : File.Exists(fallbackTemplatePath)
+                    ? await File.ReadAllTextAsync(fallbackTemplatePath)
+                    : "<p>Hello {{FullName}}, your OTP is <strong>{{OtpCode}}</strong>.</p>";
+
+            return html
+                .Replace("{{FullName}}", System.Net.WebUtility.HtmlEncode(fullName))
+                .Replace("{{OtpCode}}", System.Net.WebUtility.HtmlEncode(otpCode))
+                .Replace("{{Year}}", DateTime.UtcNow.Year.ToString());
         }
 
         private string GenerateAccessToken(User user)

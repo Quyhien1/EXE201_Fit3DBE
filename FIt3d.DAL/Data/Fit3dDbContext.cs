@@ -27,6 +27,7 @@ namespace FIt3d.DAL.Data
         public DbSet<Model> Models { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<Otp> Otps { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

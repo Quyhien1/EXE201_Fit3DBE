@@ -41,6 +41,28 @@ namespace Fit3d.BLL.DTOs
         public string? Phone { get; set; }
     }
 
+    public class ForgotPasswordRequest
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordWithOtpRequest
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(10)]
+        public string Otp { get; set; } = string.Empty;
+
+        [Required]
+        [MinLength(6)]
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
     // Response DTOs
     public class LoginResponse
     {
@@ -71,5 +93,11 @@ namespace Fit3d.BLL.DTOs
         public string? RefreshToken { get; set; }
         public DateTime? AccessTokenExpiration { get; set; }
         public DateTime? RefreshTokenExpiration { get; set; }
+    }
+
+    public class ForgotPasswordResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
     }
 }
