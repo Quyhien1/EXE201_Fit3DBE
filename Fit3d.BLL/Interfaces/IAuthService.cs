@@ -10,5 +10,7 @@ namespace Fit3d.BLL.Interfaces
         Task<RefreshTokenResponse> RefreshTokenAsync(string token, string? ipAddress = null);
         Task<bool> RevokeTokenAsync(string token, string? ipAddress = null);
         Task<User?> GetUserByIdAsync(Guid userId);
+        Task<ForgotPasswordResponse> ForgotPasswordAsync(string email);
+        Task<ForgotPasswordResponse> ResetPasswordWithOtpAsync(string email, string otp, string newPassword);
     }
 }

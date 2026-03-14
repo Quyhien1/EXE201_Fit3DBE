@@ -2,7 +2,10 @@
 using FIt3d.DAL.Data;
 using FIt3d.DAL.Repositories.Implements;
 using FIt3d.DAL.Repositories.Interfaces;
+using Fit3d.API.Jobs;
 using Fit3d.API.Middlewares;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Fit3d.BLL.Configuration;
 using Fit3d.BLL.Interfaces;
@@ -19,6 +22,14 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<Fit3dDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddHangfire(configuration =>
+    configuration
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UsePostgreSqlStorage(options =>
+            options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("DefaultConnection"))));
+builder.Services.AddHangfireServer();
+
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
@@ -30,6 +41,9 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<IOtpService, OtpService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<OtpRefreshJob>();
 
 // Gộp cả AI và Payment vào chung
 builder.Services.AddScoped<IAIUsageLogService, AIUsageLogService>();
@@ -39,6 +53,7 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 // Cấu hình Setting
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<PayOsSetings>(builder.Configuration.GetSection("PayOsSetings"));
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
 // Đọc appsettings mặc định
 builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
@@ -143,6 +158,13 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
+
+app.UseHangfireDashboard("/hangfire");
+
+RecurringJob.AddOrUpdate<OtpRefreshJob>(
+    recurringJobId: "refresh-otp-for-all-accounts",
+    methodCall: job => job.RefreshOtpsAsync(),
+    cronExpression: Cron.Minutely);
 
 var provider = new FileExtensionContentTypeProvider();
 provider.Mappings[".glb"] = "model/gltf-binary";

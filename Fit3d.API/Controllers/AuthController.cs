@@ -56,6 +56,42 @@ namespace Fit3d.API.Controllers
         }
 
         /// <summary>
+        /// Send OTP to email for forgot password
+        /// </summary>
+        [HttpPost("forgot-password")]
+        [ProducesResponseType(typeof(ForgotPasswordResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ForgotPasswordResponse), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            var response = await _authService.ForgotPasswordAsync(request.Email);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// Reset password using email and OTP without login
+        /// </summary>
+        [HttpPost("reset-password")]
+        [ProducesResponseType(typeof(ForgotPasswordResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ForgotPasswordResponse), StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordWithOtpRequest request)
+        {
+            var response = await _authService.ResetPasswordWithOtpAsync(request.Email, request.Otp, request.NewPassword);
+
+            if (!response.Success)
+            {
+                return BadRequest(response);
+            }
+
+            return Ok(response);
+        }
+
+        /// <summary>
         /// Refresh access token using refresh token
         /// </summary>
         [HttpPost("refresh-token")]
