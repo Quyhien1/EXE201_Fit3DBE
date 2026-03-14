@@ -18,7 +18,6 @@ using Microsoft.AspNetCore.StaticFiles;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddHttpClient();
 
 builder.Services.AddDbContext<Fit3dDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -54,7 +53,7 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 // Cấu hình Setting
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.Configure<PayOsSetings>(builder.Configuration.GetSection("PayOsSetings"));
-builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+builder.Services.Configure<GmailApiSettings>(builder.Configuration.GetSection("GmailApiSettings"));
 
 // Đọc appsettings mặc định
 builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
