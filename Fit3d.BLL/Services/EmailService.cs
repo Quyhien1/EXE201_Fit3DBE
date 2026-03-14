@@ -1,63 +1,84 @@
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
 using Fit3d.BLL.Configuration;
 using Fit3d.BLL.Interfaces;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Gmail.v1;
+using Google.Apis.Gmail.v1.Data;
+using Google.Apis.Services;
+using Google.Apis.Util.Store;
 using Microsoft.Extensions.Options;
+using MimeKit;
+using System.Threading;
 
 namespace Fit3d.BLL.Services
 {
     public class EmailService : IEmailService
     {
-        private readonly EmailSettings _emailSettings;
-        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly GmailApiSettings _gmailSettings;
 
-        public EmailService(IOptions<EmailSettings> emailSettings, IHttpClientFactory httpClientFactory)
+        public EmailService(IOptions<GmailApiSettings> gmailSettings)
         {
-            _emailSettings = emailSettings.Value;
-            _httpClientFactory = httpClientFactory;
+            _gmailSettings = gmailSettings.Value;
         }
 
         public async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
         {
-            if (!_emailSettings.UseHttpApi)
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(_gmailSettings.SenderName, _gmailSettings.SenderEmail));
+            message.To.Add(MailboxAddress.Parse(toEmail));
+            message.Subject = subject;
+
+            message.Body = new BodyBuilder
             {
-                throw new InvalidOperationException("HTTP email provider is disabled.");
-            }
+                HtmlBody = htmlBody
+            }.ToMessageBody();
 
-            if (string.IsNullOrWhiteSpace(_emailSettings.ApiUrl) || string.IsNullOrWhiteSpace(_emailSettings.ApiKey))
+            var credential = await CreateCredentialAsync();
+
+            using var gmailService = new GmailService(new BaseClientService.Initializer
             {
-                throw new InvalidOperationException("Email HTTP API settings are missing.");
-            }
+                HttpClientInitializer = credential,
+                ApplicationName = _gmailSettings.ApplicationName
+            });
 
-            var client = _httpClientFactory.CreateClient(nameof(EmailService));
+            using var stream = new MemoryStream();
+            await message.WriteToAsync(stream);
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, _emailSettings.ApiUrl);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _emailSettings.ApiKey);
+            var rawMessage = Convert.ToBase64String(stream.ToArray())
+                .Replace('+', '-')
+                .Replace('/', '_')
+                .TrimEnd('=');
 
-            var payload = new
+            var gmailMessage = new Message
             {
-                from = string.IsNullOrWhiteSpace(_emailSettings.SenderName)
-                    ? _emailSettings.SenderEmail
-                    : $"{_emailSettings.SenderName} <{_emailSettings.SenderEmail}>",
-                to = new[] { toEmail },
-                subject,
-                html = htmlBody
+                Raw = rawMessage
             };
 
-            request.Content = new StringContent(
-                JsonSerializer.Serialize(payload),
-                Encoding.UTF8,
-                "application/json");
+            await gmailService.Users.Messages.Send(gmailMessage, _gmailSettings.UserId).ExecuteAsync();
+        }
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_emailSettings.TimeoutSeconds));
-            var response = await client.SendAsync(request, cts.Token);
-
-            if (!response.IsSuccessStatusCode)
+        private async Task<UserCredential> CreateCredentialAsync()
+        {
+            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
             {
-                var body = await response.Content.ReadAsStringAsync(cts.Token);
-                throw new InvalidOperationException($"Email API error {(int)response.StatusCode}: {body}");
-            }
+                ClientSecrets = new ClientSecrets
+                {
+                    ClientId = _gmailSettings.ClientId,
+                    ClientSecret = _gmailSettings.ClientSecret
+                },
+                Scopes = new[] { GmailService.Scope.GmailSend },
+                DataStore = new NullDataStore()
+            });
+
+            var token = new Google.Apis.Auth.OAuth2.Responses.TokenResponse
+            {
+                RefreshToken = _gmailSettings.RefreshToken
+            };
+
+            var credential = new UserCredential(flow, _gmailSettings.SenderEmail, token);
+            await credential.RefreshTokenAsync(CancellationToken.None);
+
+            return credential;
         }
     }
 }
