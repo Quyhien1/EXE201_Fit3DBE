@@ -6,6 +6,7 @@ using Fit3d.BLL.DTOs;
 using Fit3d.BLL.Interfaces;
 using FIt3d.DAL.Common;
 using FIt3d.DAL.Entities;
+using FIt3d.DAL.Enums;
 using FIt3d.DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,8 @@ namespace Fit3d.BLL.Services
         private readonly IGenericRepository<ProductColor> _colorRepository;
         private readonly IGenericRepository<ProductSize> _sizeRepository;
         private readonly IGenericRepository<Category> _categoryRepository;
+        private readonly IGenericRepository<User> _userRepository;
+        private readonly IGenericRepository<Subscription> _subscriptionRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IFileService _fileService;
 
@@ -25,6 +28,8 @@ namespace Fit3d.BLL.Services
             IGenericRepository<ProductColor> colorRepository,
             IGenericRepository<ProductSize> sizeRepository,
             IGenericRepository<Category> categoryRepository,
+            IGenericRepository<User> userRepository,
+            IGenericRepository<Subscription> subscriptionRepository,
             IUnitOfWork unitOfWork,
             IFileService fileService)
         {
@@ -32,6 +37,8 @@ namespace Fit3d.BLL.Services
             _colorRepository = colorRepository;
             _sizeRepository = sizeRepository;
             _categoryRepository = categoryRepository;
+            _userRepository = userRepository;
+            _subscriptionRepository = subscriptionRepository;
             _unitOfWork = unitOfWork;
             _fileService = fileService;
         }
@@ -69,8 +76,10 @@ namespace Fit3d.BLL.Services
             return entity == null ? null : ToDTO(entity);
         }
 
-        public async Task<ProductDTO> CreateAsync(CreateProductDTO createDto)
+        public async Task<ProductDTO> CreateAsync(CreateProductDTO createDto, Guid uploaderUserId)
         {
+            var shopName = await GetShopNameAndValidateStarterSubscriptionAsync(uploaderUserId);
+
             string? finalImageUrl = createDto.ImageUrl;
             if (createDto.ImageFile != null && createDto.ImageFile.Length > 0)
             {
@@ -98,6 +107,7 @@ namespace Fit3d.BLL.Services
                 SalePrice = createDto.SalePrice,
                 SKU = createDto.SKU,
                 Brand = createDto.Brand,
+                Shop = shopName,
                 ImageUrl = finalImageUrl,
                 ModelFilePath = finalModelPath,
                 PreviewModelPath = finalPreviewPath,
@@ -145,6 +155,36 @@ namespace Fit3d.BLL.Services
             if (category != null) entity.Category = category;
 
             return ToDTO(entity);
+        }
+
+        private async Task<string> GetShopNameAndValidateStarterSubscriptionAsync(Guid uploaderUserId)
+        {
+            var user = await _userRepository.GetByIdAsync(uploaderUserId);
+            if (user == null || user.IsDeleted)
+            {
+                throw new ArgumentException("Uploader not found");
+            }
+
+            var hasStarterSubscription = await _subscriptionRepository.GetQueryable(
+                    predicate: x => x.UserId == uploaderUserId
+                                    && !x.IsDeleted
+                                    && x.Status == SubscriptionStatus.Active
+                                    && x.EndDate >= DateTime.UtcNow,
+                    include: x => x.Include(s => s.SubscriptionPlan))
+                .AnyAsync(x => x.SubscriptionPlan.IsActive &&
+                               x.SubscriptionPlan.Name.ToLower().Contains("starter"));
+
+            if (!hasStarterSubscription)
+            {
+                throw new InvalidOperationException("Only users with an active Starter pack subscription can upload products.");
+            }
+
+            if (string.IsNullOrWhiteSpace(user.ShopName))
+            {
+                throw new InvalidOperationException("Uploader must have ShopName before uploading products.");
+            }
+
+            return user.ShopName;
         }
 
         public async Task<ProductDTO?> UpdateAsync(Guid id, UpdateProductDTO updateDto)
@@ -304,6 +344,7 @@ namespace Fit3d.BLL.Services
                 SalePrice = entity.SalePrice,
                 SKU = entity.SKU,
                 Brand = entity.Brand,
+                Shop = entity.Shop,
                 ImageUrl = entity.ImageUrl,
                 PreviewModelPath = entity.PreviewModelPath,
                 ModelFilePath = entity.ModelFilePath,

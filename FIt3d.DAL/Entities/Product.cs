@@ -27,6 +27,9 @@ namespace FIt3d.DAL.Entities
         [MaxLength(100)]
         public string? Brand { get; set; }
 
+        [MaxLength(200)]
+        public string? Shop { get; set; }
+
         [MaxLength(500)]
         public string? ImageUrl { get; set; }
 
