@@ -46,6 +46,7 @@ namespace Fit3d.BLL.DTOs
         public decimal? SalePrice { get; set; }
         public string? SKU { get; set; }
         public string? Brand { get; set; }
+        public string? Shop { get; set; }
         public string? ImageUrl { get; set; }
         public string? PreviewModelPath { get; set; }
         public string? ModelFilePath { get; set; }

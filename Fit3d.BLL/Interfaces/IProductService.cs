@@ -11,7 +11,7 @@ namespace Fit3d.BLL.Interfaces
         Task<ICollection<ProductDTO>> GetAllAsync();
         Task<PagingResponse<ProductDTO>> GetPagingAsync(int page, int size, string? search = null, Guid? categoryId = null);
         Task<ProductDTO?> GetByIdAsync(Guid id);
-        Task<ProductDTO> CreateAsync(CreateProductDTO createDto);
+        Task<ProductDTO> CreateAsync(CreateProductDTO createDto, Guid uploaderUserId);
         Task<ProductDTO?> UpdateAsync(Guid id, UpdateProductDTO updateDto);
         Task<bool> DeleteAsync(Guid id);
 

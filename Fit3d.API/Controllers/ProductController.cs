@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Fit3d.BLL.DTOs;
 using Fit3d.BLL.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Fit3d.API.Controllers
@@ -40,9 +42,13 @@ namespace Fit3d.API.Controllers
         }
 
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> Create([FromForm] CreateProductDTO createDto)
         {
-            var result = await _service.CreateAsync(createDto);
+            var userId = GetCurrentUserId();
+            if (userId == null) return Unauthorized();
+
+            var result = await _service.CreateAsync(createDto, userId.Value);
             return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
         }
 
@@ -92,6 +98,17 @@ namespace Fit3d.API.Controllers
             var result = await _service.DeleteSizeAsync(sizeId);
             if (!result) return NotFound();
             return NoContent();
+        }
+
+        private Guid? GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return null;
+            }
+
+            return userId;
         }
     }
 }
