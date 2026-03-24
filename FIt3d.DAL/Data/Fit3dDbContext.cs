@@ -269,7 +269,7 @@ namespace FIt3d.DAL.Data
                     PasswordHash = "AQAAAAIAAYagAAAAEJ8g1234567890abcdefghijklmnop",
                     Phone = "0912345678",
                     Address = "456 Customer Lane, Ha Noi",
-                    Role = UserRole.Customer,
+                    Role = UserRole.User,
                     IsActive = true,
                     CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc)
                 },
@@ -281,7 +281,7 @@ namespace FIt3d.DAL.Data
                     PasswordHash = "AQAAAAIAAYagAAAAEJ8g1234567890abcdefghijklmnop",
                     Phone = "0923456789",
                     Address = "789 Shopping Street, Da Nang",
-                    Role = UserRole.Customer,
+                    Role = UserRole.User,
                     IsActive = true,
                     CreatedAt = new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc)
                 }
@@ -381,7 +381,7 @@ namespace FIt3d.DAL.Data
                 new SubscriptionPlan
                 {
                     Id = b2bBasic,
-                    Name = "B2B Basic",
+                    Name = "Starter Pack",
                     Description = "Gói c? b?n cho shop - 50 model ph?i ??, 10 l?n ch?nh s?a/model",
                     PlanType = PlanType.B2B_Shop,
                     Price = 499000m,
