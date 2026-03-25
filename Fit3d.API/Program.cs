@@ -14,10 +14,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.StaticFiles;
+using Fit3d.API.Hubs;
+using Fit3d.API.Realtime;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 
 builder.Services.AddDbContext<Fit3dDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -49,6 +52,8 @@ builder.Services.AddScoped<OtpRefreshJob>();
 builder.Services.AddScoped<IAIUsageLogService, AIUsageLogService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<IAdminAnalyticsSnapshotProvider, AdminAnalyticsSnapshotProvider>();
+builder.Services.AddHostedService<AdminAnalyticsBroadcastService>();
 
 // Cấu hình Setting
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
@@ -91,6 +96,22 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
         ClockSkew = TimeSpan.Zero
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/hubs/admin-analytics"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -185,6 +206,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<AdminAnalyticsHub>("/hubs/admin-analytics");
 
 app.MapGet("/", async context =>
 {

@@ -109,7 +109,7 @@ namespace Fit3d.BLL.Services
                 Email = request.Email,
                 PasswordHash = HashPassword(request.Password),
                 Phone = request.Phone,
-                Role = UserRole.Customer,
+                Role = UserRole.User,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };

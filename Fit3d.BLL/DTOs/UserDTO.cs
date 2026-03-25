@@ -39,7 +39,7 @@ namespace Fit3d.BLL.DTOs
         [MaxLength(500)]
         public string? Address { get; set; }
 
-        public UserRole Role { get; set; } = UserRole.Customer;
+        public UserRole Role { get; set; } = UserRole.User;
     }
 
     public class UpdateUserDTO

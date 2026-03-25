@@ -265,6 +265,32 @@ namespace Fit3d.BLL.Services
                     return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy người dùng!" };
                 }
 
+                if (IsStarterShopPlan(plan))
+                {
+                    if (string.IsNullOrWhiteSpace(request.ShopName))
+                    {
+                        return new ServiceResponse { Succeeded = false, Message = "Vui lòng nhập tên shop khi mua gói Starter!" };
+                    }
+
+                    if (string.IsNullOrWhiteSpace(request.ShopDescription))
+                    {
+                        return new ServiceResponse { Succeeded = false, Message = "Vui lòng nhập mô tả shop khi mua gói Starter!" };
+                    }
+
+                    user.ShopName = request.ShopName;
+                    user.ShopDescription = request.ShopDescription;
+                    user.UpdatedAt = DateTime.UtcNow;
+                    _unitOfWork.GetRepository<User>().UpdateAsync(user);
+                }
+                else if (!string.IsNullOrWhiteSpace(request.ShopName) || !string.IsNullOrWhiteSpace(request.ShopDescription))
+                {
+                    return new ServiceResponse
+                    {
+                        Succeeded = false,
+                        Message = "Chỉ gói Starter Pack mới được phép gửi thông tin shop."
+                    };
+                }
+
                 var subscription = new Subscription
                 {
                     UserId = request.UserId,
@@ -273,7 +299,7 @@ namespace Fit3d.BLL.Services
                     EndDate = DateTime.UtcNow.AddDays(plan.DurationInDays),
                     Status = SubscriptionStatus.Pending,
                     PaidAmount = plan.Price,
-                    PaymentMethod = "PayOS",
+                    PaymentMethod = "PayOS"
                 };
                 await _unitOfWork.GetRepository<Subscription>().InsertAsync(subscription);
                 await _unitOfWork.SaveChangesAsync();
@@ -321,7 +347,9 @@ namespace Fit3d.BLL.Services
             var subscription = await _unitOfWork.GetRepository<Subscription>()
                 .SingleOrDefaultAsync(
                     predicate: s => s.Id == subscriptionId,
-                    include: x => x.Include(s => s.SubscriptionPlan)
+                    include: x => x
+                        .Include(s => s.SubscriptionPlan)
+                        .Include(s => s.User)
                 );
 
             if (subscription == null)
@@ -338,12 +366,22 @@ namespace Fit3d.BLL.Services
 
             try
             {
-                var durationInDays = subscription.SubscriptionPlan.DurationInDays;
+                var plan = subscription.SubscriptionPlan;
+                var durationInDays = plan.DurationInDays;
                 subscription.SubscriptionPlan = null!;
                 subscription.Status = SubscriptionStatus.Active;
                 subscription.StartDate = DateTime.UtcNow;
                 subscription.EndDate = DateTime.UtcNow.AddDays(durationInDays);
                 subscription.UpdatedAt = DateTime.UtcNow;
+
+                if (subscription.User != null &&
+                    IsStarterShopPlan(plan))
+                {
+                    subscription.User.Role = UserRole.Shop;
+                    subscription.User.UpdatedAt = DateTime.UtcNow;
+                    _unitOfWork.GetRepository<User>().UpdateAsync(subscription.User);
+                }
+
                 _unitOfWork.GetRepository<Subscription>().UpdateAsync(subscription);
                 await _unitOfWork.SaveChangesAsync();
 
@@ -394,6 +432,16 @@ namespace Fit3d.BLL.Services
                 _logger.LogError(ex, "Error cancelling subscription payment: {SubscriptionId}", subscriptionId);
                 return new ServiceResponse { Succeeded = false, Message = "Lỗi khi hủy thanh toán subscription!" };
             }
+        }
+
+        private static bool IsStarterShopPlan(SubscriptionPlan plan)
+        {
+            if (plan.PlanType != PlanType.B2B_Shop)
+            {
+                return false;
+            }
+
+            return string.Equals(plan.Name?.Trim(), "Starter Pack", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

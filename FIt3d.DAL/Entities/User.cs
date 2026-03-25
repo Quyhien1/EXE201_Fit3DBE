@@ -25,7 +25,7 @@ namespace FIt3d.DAL.Entities
         [MaxLength(500)]
         public string? Address { get; set; }
 
-        public UserRole Role { get; set; } = UserRole.Customer;
+        public UserRole Role { get; set; } = UserRole.User;
 
         public bool IsActive { get; set; } = true;
 
