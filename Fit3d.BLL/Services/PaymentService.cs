@@ -251,11 +251,13 @@ namespace Fit3d.BLL.Services
                     return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy gói subscription!" };
                 }
 
-                if (plan.PlanType != request.PlanType)
+                if (request.PlanType != plan.PlanType)
                 {
-                    _logger.LogError("PlanType mismatch: requested {Requested}, actual {Actual}", request.PlanType, plan.PlanType);
-                    var expectedType = request.PlanType == PlanType.B2C_StylistPro ? "Gói cá nhân (Stylist Pro)" : "Gói shop (B2B)";
-                    return new ServiceResponse { Succeeded = false, Message = $"Gói được chọn không thuộc loại {expectedType}!" };
+                    _logger.LogWarning(
+                        "PlanType mismatch for subscription payment. Request sent {Requested}, but plan {PlanId} is {Actual}. Using plan type from database.",
+                        request.PlanType,
+                        plan.Id,
+                        plan.PlanType);
                 }
 
                 var user = await _unitOfWork.GetRepository<User>().GetByIdAsync(request.UserId);
