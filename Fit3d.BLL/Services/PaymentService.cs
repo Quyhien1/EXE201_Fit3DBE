@@ -267,24 +267,8 @@ namespace Fit3d.BLL.Services
                     return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy người dùng!" };
                 }
 
-                if (IsStarterShopPlan(plan))
-                {
-                    if (string.IsNullOrWhiteSpace(request.ShopName))
-                    {
-                        return new ServiceResponse { Succeeded = false, Message = "Vui lòng nhập tên shop khi mua gói Starter!" };
-                    }
-
-                    if (string.IsNullOrWhiteSpace(request.ShopDescription))
-                    {
-                        return new ServiceResponse { Succeeded = false, Message = "Vui lòng nhập mô tả shop khi mua gói Starter!" };
-                    }
-
-                    user.ShopName = request.ShopName;
-                    user.ShopDescription = request.ShopDescription;
-                    user.UpdatedAt = DateTime.UtcNow;
-                    _unitOfWork.GetRepository<User>().UpdateAsync(user);
-                }
-                else if (!string.IsNullOrWhiteSpace(request.ShopName) || !string.IsNullOrWhiteSpace(request.ShopDescription))
+                if (!IsStarterShopPlan(plan) &&
+                    (!string.IsNullOrWhiteSpace(request.ShopName) || !string.IsNullOrWhiteSpace(request.ShopDescription)))
                 {
                     return new ServiceResponse
                     {
@@ -443,7 +427,7 @@ namespace Fit3d.BLL.Services
                 return false;
             }
 
-            return string.Equals(plan.Name?.Trim(), "Starter Pack", StringComparison.OrdinalIgnoreCase);
+            return (plan.Name?.Trim().Contains("starter", StringComparison.OrdinalIgnoreCase)).GetValueOrDefault();
         }
     }
 }
