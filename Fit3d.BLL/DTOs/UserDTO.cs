@@ -13,6 +13,8 @@ namespace Fit3d.BLL.DTOs
         public string? Phone { get; set; }
         public string? Address { get; set; }
         public UserRole Role { get; set; }
+        public string? ShopName { get; set; }
+        public string? ShopDescription { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
@@ -60,6 +62,12 @@ namespace Fit3d.BLL.DTOs
         public string? Address { get; set; }
 
         public UserRole Role { get; set; }
+
+        [MaxLength(200)]
+        public string? ShopName { get; set; }
+
+        [MaxLength(500)]
+        public string? ShopDescription { get; set; }
 
         public bool IsActive { get; set; }
     }

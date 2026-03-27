@@ -251,11 +251,13 @@ namespace Fit3d.BLL.Services
                     return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy gói subscription!" };
                 }
 
-                if (plan.PlanType != request.PlanType)
+                if (request.PlanType != plan.PlanType)
                 {
-                    _logger.LogError("PlanType mismatch: requested {Requested}, actual {Actual}", request.PlanType, plan.PlanType);
-                    var expectedType = request.PlanType == PlanType.B2C_StylistPro ? "Gói cá nhân (Stylist Pro)" : "Gói shop (B2B)";
-                    return new ServiceResponse { Succeeded = false, Message = $"Gói được chọn không thuộc loại {expectedType}!" };
+                    _logger.LogWarning(
+                        "PlanType mismatch for subscription payment. Request sent {Requested}, but plan {PlanId} is {Actual}. Using plan type from database.",
+                        request.PlanType,
+                        plan.Id,
+                        plan.PlanType);
                 }
 
                 var user = await _unitOfWork.GetRepository<User>().GetByIdAsync(request.UserId);
@@ -265,24 +267,8 @@ namespace Fit3d.BLL.Services
                     return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy người dùng!" };
                 }
 
-                if (IsStarterShopPlan(plan))
-                {
-                    if (string.IsNullOrWhiteSpace(request.ShopName))
-                    {
-                        return new ServiceResponse { Succeeded = false, Message = "Vui lòng nhập tên shop khi mua gói Starter!" };
-                    }
-
-                    if (string.IsNullOrWhiteSpace(request.ShopDescription))
-                    {
-                        return new ServiceResponse { Succeeded = false, Message = "Vui lòng nhập mô tả shop khi mua gói Starter!" };
-                    }
-
-                    user.ShopName = request.ShopName;
-                    user.ShopDescription = request.ShopDescription;
-                    user.UpdatedAt = DateTime.UtcNow;
-                    _unitOfWork.GetRepository<User>().UpdateAsync(user);
-                }
-                else if (!string.IsNullOrWhiteSpace(request.ShopName) || !string.IsNullOrWhiteSpace(request.ShopDescription))
+                if (!IsStarterShopPlan(plan) &&
+                    (!string.IsNullOrWhiteSpace(request.ShopName) || !string.IsNullOrWhiteSpace(request.ShopDescription)))
                 {
                     return new ServiceResponse
                     {
@@ -441,7 +427,7 @@ namespace Fit3d.BLL.Services
                 return false;
             }
 
-            return string.Equals(plan.Name?.Trim(), "Starter Pack", StringComparison.OrdinalIgnoreCase);
+            return (plan.Name?.Trim().Contains("starter", StringComparison.OrdinalIgnoreCase)).GetValueOrDefault();
         }
     }
 }

@@ -93,6 +93,12 @@ namespace Fit3d.BLL.Services
             entity.Phone = updateDto.Phone;
             entity.Address = updateDto.Address;
             entity.Role = updateDto.Role;
+            entity.ShopName = entity.Role == FIt3d.DAL.Enums.UserRole.Shop
+                ? updateDto.ShopName?.Trim()
+                : null;
+            entity.ShopDescription = entity.Role == FIt3d.DAL.Enums.UserRole.Shop
+                ? updateDto.ShopDescription?.Trim()
+                : null;
             entity.IsActive = updateDto.IsActive;
             entity.UpdatedAt = DateTime.UtcNow;
 
@@ -142,6 +148,8 @@ namespace Fit3d.BLL.Services
                 Phone = entity.Phone,
                 Address = entity.Address,
                 Role = entity.Role,
+                ShopName = entity.ShopName,
+                ShopDescription = entity.ShopDescription,
                 IsActive = entity.IsActive,
                 CreatedAt = entity.CreatedAt,
                 UpdatedAt = entity.UpdatedAt
