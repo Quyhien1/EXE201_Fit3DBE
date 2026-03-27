@@ -76,8 +76,8 @@ namespace Fit3d.BLL.Services
                     amount: item.price,
                     description: "Thanh toán đơn hàng",
                     items: items,
-                    returnUrl: $"{_payOsSetings.OrderReturnUrl}?orderId={order.Id}",
-                    cancelUrl: $"{_payOsSetings.OrderCancelUrl}?orderId={order.Id}",
+                    returnUrl: _payOsSetings.OrderReturnUrl,
+                    cancelUrl: _payOsSetings.OrderCancelUrl,
                     expiredAt: expiredAt
                 );
                 var response = await _payOs.createPaymentLink(data);
@@ -124,6 +124,11 @@ namespace Fit3d.BLL.Services
                 return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy đơn hàng!" };
             }
 
+            if (transaction.TransactionStatus == TransactionStatus.Return)
+            {
+                return new ServiceResponse { Succeeded = true, Message = "Giao dịch đã được xác nhận trước đó." };
+            }
+
             if (transaction.TransactionStatus != TransactionStatus.Pending)
             {
                 _logger.LogError("Transaction status not valid with {OrderId}", orderId);
@@ -167,6 +172,11 @@ namespace Fit3d.BLL.Services
             {
                 _logger.LogError("Order not found with OrderId: {OrderId}", orderId);
                 return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy đơn hàng!" };
+            }
+
+            if (transaction.TransactionStatus == TransactionStatus.Cancel || transaction.TransactionStatus == TransactionStatus.Fail)
+            {
+                return new ServiceResponse { Succeeded = true, Message = "Giao dịch đã được hủy trước đó." };
             }
 
             if (transaction.TransactionStatus != TransactionStatus.Pending)
@@ -303,8 +313,8 @@ namespace Fit3d.BLL.Services
                     amount: item.price,
                     description: description,
                     items: items,
-                    returnUrl: $"{_payOsSetings.SubscriptionReturnUrl}?subscriptionId={subscription.Id}",
-                    cancelUrl: $"{_payOsSetings.SubscriptionCancelUrl}?subscriptionId={subscription.Id}",
+                    returnUrl: _payOsSetings.SubscriptionReturnUrl,
+                    cancelUrl: _payOsSetings.SubscriptionCancelUrl,
                     expiredAt: expiredAt
                 );
                 var response = await _payOs.createPaymentLink(data);
@@ -342,6 +352,11 @@ namespace Fit3d.BLL.Services
             {
                 _logger.LogError("Subscription not found: {SubscriptionId}", subscriptionId);
                 return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy gói subscription!" };
+            }
+
+            if (subscription.Status == SubscriptionStatus.Active)
+            {
+                return new ServiceResponse { Succeeded = true, Message = "Subscription đã được kích hoạt trước đó." };
             }
 
             if (subscription.Status != SubscriptionStatus.Pending)
@@ -397,6 +412,11 @@ namespace Fit3d.BLL.Services
                 return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy gói subscription!" };
             }
 
+            if (subscription.Status == SubscriptionStatus.Cancelled)
+            {
+                return new ServiceResponse { Succeeded = true, Message = "Subscription đã được hủy trước đó." };
+            }
+
             if (subscription.Status != SubscriptionStatus.Pending)
             {
                 _logger.LogError("Subscription status not valid: {SubscriptionId}", subscriptionId);
@@ -428,6 +448,258 @@ namespace Fit3d.BLL.Services
             }
 
             return (plan.Name?.Trim().Contains("starter", StringComparison.OrdinalIgnoreCase)).GetValueOrDefault();
+        }
+
+        public async Task<ResponseData<PaymentTrackingResponse>> GetPaymentTrackingStatus(
+            long? orderCode,
+            string? paymentLinkId,
+            CancellationToken cancellationToken = default)
+        {
+            var tracking = await FindPaymentTracking(orderCode, paymentLinkId, cancellationToken);
+            if (tracking == null)
+            {
+                return new ResponseData<PaymentTrackingResponse>
+                {
+                    Succeeded = false,
+                    Message = "Không tìm thấy giao dịch thanh toán.",
+                    Data = null
+                };
+            }
+
+            return new ResponseData<PaymentTrackingResponse>
+            {
+                Succeeded = true,
+                Message = tracking.Message,
+                Data = tracking
+            };
+        }
+
+        public async Task<ResponseData<PaymentTrackingResponse>> ReconcilePaymentCallback(
+            PaymentCallbackSyncRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            if (!request.OrderCode.HasValue && string.IsNullOrWhiteSpace(request.PaymentLinkId))
+            {
+                return new ResponseData<PaymentTrackingResponse>
+                {
+                    Succeeded = false,
+                    Message = "Thiếu thông tin callback thanh toán.",
+                    Data = null
+                };
+            }
+
+            var normalizedStatus = request.Status?.Trim().ToUpperInvariant();
+            if (request.Cancel || string.Equals(normalizedStatus, "CANCELLED", StringComparison.OrdinalIgnoreCase))
+            {
+                var target = await FindMatchingPaymentTarget(request.OrderCode, request.PaymentLinkId, cancellationToken);
+                if (target.Transaction != null)
+                {
+                    await PaymentCancel(target.Transaction.OrderId, cancellationToken);
+                }
+                else if (target.Subscription != null)
+                {
+                    await SubscriptionPaymentCancel(target.Subscription.Id, cancellationToken);
+                }
+            }
+
+            return await GetPaymentTrackingStatus(request.OrderCode, request.PaymentLinkId, cancellationToken);
+        }
+
+        public async Task<ServiceResponse> HandlePaymentWebhook(
+            WebhookType webhook,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var paymentData = _payOs.verifyPaymentWebhookData(webhook);
+                var target = await FindMatchingPaymentTarget(paymentData.orderCode, paymentData.paymentLinkId, cancellationToken);
+                var isSuccessfulPayment =
+                    webhook.success &&
+                    string.Equals(webhook.code, "00", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(paymentData.code, "00", StringComparison.OrdinalIgnoreCase);
+
+                if (target.Transaction == null && target.Subscription == null)
+                {
+                    _logger.LogInformation(
+                        "Webhook verified but no matching local payment was found. OrderCode: {OrderCode}, PaymentLinkId: {PaymentLinkId}",
+                        paymentData.orderCode,
+                        paymentData.paymentLinkId);
+                    return new ServiceResponse
+                    {
+                        Succeeded = true,
+                        Message = "Webhook hợp lệ nhưng không khớp giao dịch nội bộ."
+                    };
+                }
+
+                if (target.Transaction != null)
+                {
+                    return isSuccessfulPayment
+                        ? await PaymentReturn(target.Transaction.OrderId, cancellationToken)
+                        : await PaymentCancel(target.Transaction.OrderId, cancellationToken);
+                }
+
+                if (target.Subscription != null)
+                {
+                    return isSuccessfulPayment
+                        ? await SubscriptionPaymentReturn(target.Subscription.Id, cancellationToken)
+                        : await SubscriptionPaymentCancel(target.Subscription.Id, cancellationToken);
+                }
+
+                return new ServiceResponse
+                {
+                    Succeeded = false,
+                    Message = "Không thể xử lý webhook thanh toán."
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Webhook verification failed.");
+                return new ServiceResponse
+                {
+                    Succeeded = false,
+                    Message = "Webhook không hợp lệ."
+                };
+            }
+        }
+
+        public Task<ServiceResponse> ConfirmWebhook(string webhookUrl, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(webhookUrl))
+            {
+                return Task.FromResult(new ServiceResponse
+                {
+                    Succeeded = false,
+                    Message = "Webhook URL không được để trống."
+                });
+            }
+
+            try
+            {
+                _payOs.confirmWebhook(webhookUrl.Trim());
+                return Task.FromResult(new ServiceResponse
+                {
+                    Succeeded = true,
+                    Message = "Xác nhận webhook thành công!"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error confirming webhook URL: {WebhookUrl}", webhookUrl);
+                return Task.FromResult(new ServiceResponse
+                {
+                    Succeeded = false,
+                    Message = "Không thể xác nhận webhook URL."
+                });
+            }
+        }
+
+        private async Task<PaymentTrackingResponse?> FindPaymentTracking(
+            long? orderCode,
+            string? paymentLinkId,
+            CancellationToken cancellationToken)
+        {
+            var target = await FindMatchingPaymentTarget(orderCode, paymentLinkId, cancellationToken);
+            if (target.Transaction != null)
+            {
+                return MapOrderTracking(target.Transaction);
+            }
+
+            if (target.Subscription != null)
+            {
+                return MapSubscriptionTracking(target.Subscription);
+            }
+
+            return null;
+        }
+
+        private async Task<(PaymentTransaction? Transaction, Subscription? Subscription)> FindMatchingPaymentTarget(
+            long? orderCode,
+            string? paymentLinkId,
+            CancellationToken cancellationToken)
+        {
+            PaymentTransaction? transaction = null;
+            Subscription? subscription = null;
+
+            if (orderCode.HasValue)
+            {
+                transaction = await _unitOfWork.GetRepository<PaymentTransaction>()
+                    .SingleOrDefaultAsync(
+                        predicate: t => t.OrderCode == orderCode.Value,
+                        include: x => x.Include(t => t.Order));
+            }
+
+            if (transaction == null && !string.IsNullOrWhiteSpace(paymentLinkId))
+            {
+                transaction = await _unitOfWork.GetRepository<PaymentTransaction>()
+                    .SingleOrDefaultAsync(
+                        predicate: t => t.PaymentLinkId == paymentLinkId,
+                        include: x => x.Include(t => t.Order));
+            }
+
+            if (transaction == null && !string.IsNullOrWhiteSpace(paymentLinkId))
+            {
+                subscription = await _unitOfWork.GetRepository<Subscription>()
+                    .SingleOrDefaultAsync(
+                        predicate: s => s.PaymentTransactionId == paymentLinkId,
+                        include: x => x.Include(s => s.SubscriptionPlan).Include(s => s.User));
+            }
+
+            return (transaction, subscription);
+        }
+
+        private static PaymentTrackingResponse MapOrderTracking(PaymentTransaction transaction)
+        {
+            var status = transaction.TransactionStatus switch
+            {
+                TransactionStatus.Return => "PAID",
+                TransactionStatus.Cancel => "CANCELLED",
+                TransactionStatus.Fail => "FAILED",
+                _ => "PENDING"
+            };
+
+            return new PaymentTrackingResponse
+            {
+                Success = status == "PAID",
+                IsFinal = status is "PAID" or "CANCELLED" or "FAILED",
+                Status = status,
+                Type = "order",
+                OrderId = transaction.OrderId,
+                OrderCode = transaction.OrderCode,
+                PaymentLinkId = transaction.PaymentLinkId,
+                Message = status switch
+                {
+                    "PAID" => "Đơn hàng đã được xác nhận thanh toán.",
+                    "CANCELLED" => "Đơn hàng đã bị hủy thanh toán.",
+                    "FAILED" => "Thanh toán đơn hàng thất bại.",
+                    _ => "Đang chờ payOS xác nhận thanh toán qua webhook."
+                }
+            };
+        }
+
+        private static PaymentTrackingResponse MapSubscriptionTracking(Subscription subscription)
+        {
+            var status = subscription.Status switch
+            {
+                SubscriptionStatus.Active => "PAID",
+                SubscriptionStatus.Cancelled => "CANCELLED",
+                _ => "PENDING"
+            };
+
+            return new PaymentTrackingResponse
+            {
+                Success = status == "PAID",
+                IsFinal = status is "PAID" or "CANCELLED",
+                Status = status,
+                Type = "subscription",
+                SubscriptionId = subscription.Id,
+                PaymentLinkId = subscription.PaymentTransactionId,
+                Message = status switch
+                {
+                    "PAID" => "Gói subscription đã được kích hoạt.",
+                    "CANCELLED" => "Thanh toán subscription đã bị hủy.",
+                    _ => "Đang chờ payOS xác nhận subscription qua webhook."
+                }
+            };
         }
     }
 }
