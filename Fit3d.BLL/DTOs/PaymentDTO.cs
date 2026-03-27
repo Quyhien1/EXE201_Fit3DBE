@@ -23,6 +23,32 @@ namespace Fit3d.BLL.DTOs
         public string? ShopDescription { get; set; }
     }
 
+    public class PaymentTrackingResponse
+    {
+        public bool Success { get; set; }
+        public bool IsFinal { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public Guid? OrderId { get; set; }
+        public Guid? SubscriptionId { get; set; }
+        public long? OrderCode { get; set; }
+        public string? PaymentLinkId { get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
+
+    public class PaymentCallbackSyncRequest
+    {
+        public long? OrderCode { get; set; }
+        public string? PaymentLinkId { get; set; }
+        public string? Status { get; set; }
+        public bool Cancel { get; set; }
+    }
+
+    public class ConfirmWebhookRequest
+    {
+        public string WebhookUrl { get; set; } = string.Empty;
+    }
+
     public class SubscriptionPlanResponse
     {
         public Guid Id { get; set; }
