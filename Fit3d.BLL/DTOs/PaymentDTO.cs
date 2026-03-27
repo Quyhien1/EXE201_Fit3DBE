@@ -33,6 +33,7 @@ namespace Fit3d.BLL.DTOs
         public Guid? SubscriptionId { get; set; }
         public long? OrderCode { get; set; }
         public string? PaymentLinkId { get; set; }
+        public decimal? Amount { get; set; }
         public string Message { get; set; } = string.Empty;
     }
 
