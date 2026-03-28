@@ -6,7 +6,9 @@ namespace FIt3d.DAL.Entities
 {
     public class Transaction : BaseEntity
     {
-        public Guid OrderId { get; set; }
+        public Guid? OrderId { get; set; }
+
+        public Guid? SubscriptionId { get; set; }
 
         public Guid UserId { get; set; }
 
@@ -32,7 +34,10 @@ namespace FIt3d.DAL.Entities
         public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.PayOs;
 
         [ForeignKey(nameof(OrderId))]
-        public virtual Order Order { get; set; } = null!;
+        public virtual Order? Order { get; set; }
+
+        [ForeignKey(nameof(SubscriptionId))]
+        public virtual Subscription? Subscription { get; set; }
 
         [ForeignKey(nameof(UserId))]
         public virtual User User { get; set; } = null!;
