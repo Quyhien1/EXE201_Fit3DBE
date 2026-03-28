@@ -211,10 +211,17 @@ namespace FIt3d.DAL.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
                 entity.HasQueryFilter(e => !e.IsDeleted);
+                entity.HasIndex(e => e.PaymentLinkId);
+                entity.HasIndex(e => e.SubscriptionId);
 
                 entity.HasOne(e => e.Order)
                     .WithMany()
                     .HasForeignKey(e => e.OrderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Subscription)
+                    .WithMany()
+                    .HasForeignKey(e => e.SubscriptionId)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(e => e.User)

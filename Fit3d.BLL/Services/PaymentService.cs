@@ -137,7 +137,13 @@ namespace Fit3d.BLL.Services
 
             try
             {
-                var orderResponse = await _orderService.UpdateOrderToReturn(transaction.OrderId, cancellationToken);
+                if (!transaction.OrderId.HasValue)
+                {
+                    _logger.LogError("Order transaction missing OrderId: {TransactionId}", transaction.Id);
+                    return new ServiceResponse { Succeeded = false, Message = "Giao dịch không gắn với đơn hàng!" };
+                }
+
+                var orderResponse = await _orderService.UpdateOrderToReturn(transaction.OrderId.Value, cancellationToken);
                 if (!orderResponse.Succeeded)
                 {
                     transaction.TransactionStatus = TransactionStatus.Fail;
@@ -187,7 +193,13 @@ namespace Fit3d.BLL.Services
 
             try
             {
-                var orderResponse = await _orderService.UpdateOrderToCancel(transaction.OrderId, cancellationToken);
+                if (!transaction.OrderId.HasValue)
+                {
+                    _logger.LogError("Order transaction missing OrderId: {TransactionId}", transaction.Id);
+                    return new ServiceResponse { Succeeded = false, Message = "Giao dịch không gắn với đơn hàng!" };
+                }
+
+                var orderResponse = await _orderService.UpdateOrderToCancel(transaction.OrderId.Value, cancellationToken);
                 if (!orderResponse.Succeeded)
                 {
                     transaction.TransactionStatus = TransactionStatus.Fail;
@@ -321,6 +333,22 @@ namespace Fit3d.BLL.Services
 
                 subscription.PaymentTransactionId = response.paymentLinkId;
                 _unitOfWork.GetRepository<Subscription>().UpdateAsync(subscription);
+
+                var subscriptionTransaction = new PaymentTransaction
+                {
+                    OrderId = null,
+                    SubscriptionId = subscription.Id,
+                    UserId = request.UserId,
+                    OrderCode = orderCode,
+                    PaymentLinkId = response.paymentLinkId,
+                    CheckoutUrl = response.checkoutUrl,
+                    QrCode = response.qrCode,
+                    Amount = plan.Price,
+                    Description = $"Thanh toán gói {plan.Name}",
+                    TransactionStatus = TransactionStatus.Pending,
+                    PaymentMethod = PaymentMethod.PayOs,
+                };
+                await _unitOfWork.GetRepository<PaymentTransaction>().InsertAsync(subscriptionTransaction);
                 await _unitOfWork.SaveChangesAsync();
 
                 _logger.LogInformation("Subscription payment created for UserId: {UserId}, PlanId: {PlanId}", request.UserId, plan.Id);
@@ -367,6 +395,11 @@ namespace Fit3d.BLL.Services
 
             try
             {
+                var subscriptionTransaction = await _unitOfWork.GetRepository<PaymentTransaction>()
+                    .SingleOrDefaultAsync(predicate: t =>
+                        t.SubscriptionId == subscription.Id ||
+                        (!string.IsNullOrWhiteSpace(subscription.PaymentTransactionId) && t.PaymentLinkId == subscription.PaymentTransactionId));
+
                 var plan = subscription.SubscriptionPlan;
                 var durationInDays = plan.DurationInDays;
                 subscription.SubscriptionPlan = null!;
@@ -383,6 +416,12 @@ namespace Fit3d.BLL.Services
                     _unitOfWork.GetRepository<User>().UpdateAsync(subscription.User);
                 }
 
+                if (subscriptionTransaction != null)
+                {
+                    subscriptionTransaction.TransactionStatus = TransactionStatus.Return;
+                    _unitOfWork.GetRepository<PaymentTransaction>().UpdateAsync(subscriptionTransaction);
+                }
+
                 _unitOfWork.GetRepository<Subscription>().UpdateAsync(subscription);
                 await _unitOfWork.SaveChangesAsync();
 
@@ -391,10 +430,22 @@ namespace Fit3d.BLL.Services
             }
             catch (Exception ex)
             {
+                var subscriptionTransaction = await _unitOfWork.GetRepository<PaymentTransaction>()
+                    .SingleOrDefaultAsync(predicate: t =>
+                        t.SubscriptionId == subscription.Id ||
+                        (!string.IsNullOrWhiteSpace(subscription.PaymentTransactionId) && t.PaymentLinkId == subscription.PaymentTransactionId));
+
                 subscription.SubscriptionPlan = null!;
                 subscription.Status = SubscriptionStatus.Cancelled;
                 subscription.UpdatedAt = DateTime.UtcNow;
                 _unitOfWork.GetRepository<Subscription>().UpdateAsync(subscription);
+
+                if (subscriptionTransaction != null)
+                {
+                    subscriptionTransaction.TransactionStatus = TransactionStatus.Fail;
+                    _unitOfWork.GetRepository<PaymentTransaction>().UpdateAsync(subscriptionTransaction);
+                }
+
                 await _unitOfWork.SaveChangesAsync();
                 _logger.LogError(ex, "Subscription payment return fail: {SubscriptionId}", subscriptionId);
                 return new ServiceResponse { Succeeded = false, Message = "Thanh toán gói subscription thất bại!" };
@@ -425,9 +476,21 @@ namespace Fit3d.BLL.Services
 
             try
             {
+                var subscriptionTransaction = await _unitOfWork.GetRepository<PaymentTransaction>()
+                    .SingleOrDefaultAsync(predicate: t =>
+                        t.SubscriptionId == subscription.Id ||
+                        (!string.IsNullOrWhiteSpace(subscription.PaymentTransactionId) && t.PaymentLinkId == subscription.PaymentTransactionId));
+
                 subscription.Status = SubscriptionStatus.Cancelled;
                 subscription.UpdatedAt = DateTime.UtcNow;
                 _unitOfWork.GetRepository<Subscription>().UpdateAsync(subscription);
+
+                if (subscriptionTransaction != null)
+                {
+                    subscriptionTransaction.TransactionStatus = TransactionStatus.Cancel;
+                    _unitOfWork.GetRepository<PaymentTransaction>().UpdateAsync(subscriptionTransaction);
+                }
+
                 await _unitOfWork.SaveChangesAsync();
 
                 _logger.LogInformation("Subscription payment cancelled: {SubscriptionId}", subscriptionId);
@@ -494,7 +557,10 @@ namespace Fit3d.BLL.Services
                 var target = await FindMatchingPaymentTarget(request.OrderCode, request.PaymentLinkId, cancellationToken);
                 if (target.Transaction != null)
                 {
-                    await PaymentCancel(target.Transaction.OrderId, cancellationToken);
+                    if (target.Transaction.OrderId.HasValue)
+                    {
+                        await PaymentCancel(target.Transaction.OrderId.Value, cancellationToken);
+                    }
                 }
                 else if (target.Subscription != null)
                 {
@@ -533,9 +599,18 @@ namespace Fit3d.BLL.Services
 
                 if (target.Transaction != null)
                 {
+                    if (!target.Transaction.OrderId.HasValue)
+                    {
+                        return new ServiceResponse
+                        {
+                            Succeeded = false,
+                            Message = "Giao dịch order không hợp lệ."
+                        };
+                    }
+
                     return isSuccessfulPayment
-                        ? await PaymentReturn(target.Transaction.OrderId, cancellationToken)
-                        : await PaymentCancel(target.Transaction.OrderId, cancellationToken);
+                        ? await PaymentReturn(target.Transaction.OrderId.Value, cancellationToken)
+                        : await PaymentCancel(target.Transaction.OrderId.Value, cancellationToken);
                 }
 
                 if (target.Subscription != null)
@@ -624,7 +699,7 @@ namespace Fit3d.BLL.Services
             {
                 transaction = await _unitOfWork.GetRepository<PaymentTransaction>()
                     .SingleOrDefaultAsync(
-                        predicate: t => t.OrderCode == orderCode.Value,
+                        predicate: t => t.OrderId.HasValue && t.OrderCode == orderCode.Value,
                         include: x => x.Include(t => t.Order));
             }
 
@@ -632,7 +707,7 @@ namespace Fit3d.BLL.Services
             {
                 transaction = await _unitOfWork.GetRepository<PaymentTransaction>()
                     .SingleOrDefaultAsync(
-                        predicate: t => t.PaymentLinkId == paymentLinkId,
+                        predicate: t => t.OrderId.HasValue && t.PaymentLinkId == paymentLinkId,
                         include: x => x.Include(t => t.Order));
             }
 
@@ -642,6 +717,21 @@ namespace Fit3d.BLL.Services
                     .SingleOrDefaultAsync(
                         predicate: s => s.PaymentTransactionId == paymentLinkId,
                         include: x => x.Include(s => s.SubscriptionPlan).Include(s => s.User));
+            }
+
+            if (subscription == null && !string.IsNullOrWhiteSpace(paymentLinkId))
+            {
+                var subscriptionTransaction = await _unitOfWork.GetRepository<PaymentTransaction>()
+                    .SingleOrDefaultAsync(predicate: t => t.SubscriptionId.HasValue && t.PaymentLinkId == paymentLinkId);
+
+                if (subscriptionTransaction?.SubscriptionId.HasValue == true)
+                {
+                    var subscriptionId = subscriptionTransaction.SubscriptionId.Value;
+                    subscription = await _unitOfWork.GetRepository<Subscription>()
+                        .SingleOrDefaultAsync(
+                            predicate: s => s.Id == subscriptionId,
+                            include: x => x.Include(s => s.SubscriptionPlan).Include(s => s.User));
+                }
             }
 
             return (transaction, subscription);
