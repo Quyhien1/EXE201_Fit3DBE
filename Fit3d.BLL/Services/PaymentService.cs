@@ -376,7 +376,7 @@ namespace Fit3d.BLL.Services
                 subscription.UpdatedAt = DateTime.UtcNow;
 
                 if (subscription.User != null &&
-                    IsStarterShopPlan(plan))
+                    plan.PlanType == PlanType.B2B_Shop)
                 {
                     subscription.User.Role = UserRole.Shop;
                     subscription.User.UpdatedAt = DateTime.UtcNow;
@@ -666,6 +666,7 @@ namespace Fit3d.BLL.Services
                 OrderId = transaction.OrderId,
                 OrderCode = transaction.OrderCode,
                 PaymentLinkId = transaction.PaymentLinkId,
+                Amount = transaction.Amount,
                 Message = status switch
                 {
                     "PAID" => "Đơn hàng đã được xác nhận thanh toán.",
@@ -693,6 +694,7 @@ namespace Fit3d.BLL.Services
                 Type = "subscription",
                 SubscriptionId = subscription.Id,
                 PaymentLinkId = subscription.PaymentTransactionId,
+                Amount = subscription.PaidAmount,
                 Message = status switch
                 {
                     "PAID" => "Gói subscription đã được kích hoạt.",
