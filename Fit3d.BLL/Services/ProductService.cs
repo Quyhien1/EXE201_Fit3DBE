@@ -80,23 +80,23 @@ namespace Fit3d.BLL.Services
         {
             var shopName = await GetShopNameAndValidateStarterSubscriptionAsync(uploaderUserId);
 
-            string? finalImageUrl = createDto.ImageUrl;
-            if (createDto.ImageFile != null && createDto.ImageFile.Length > 0)
-            {
-                finalImageUrl = await _fileService.SaveFileAsync(createDto.ImageFile, "products");
-            }
+            var imageUploadTask = createDto.ImageFile != null && createDto.ImageFile.Length > 0
+                ? _fileService.SaveFileAsync(createDto.ImageFile, "products")
+                : Task.FromResult(createDto.ImageUrl);
 
-            string? finalModelPath = createDto.ModelFilePath;
-            if (createDto.ModelFile != null && createDto.ModelFile.Length > 0)
-            {
-                finalModelPath = await _fileService.SaveFileAsync(createDto.ModelFile, "source-models");
-            }
+            var modelUploadTask = createDto.ModelFile != null && createDto.ModelFile.Length > 0
+                ? _fileService.SaveFileAsync(createDto.ModelFile, "source-models")
+                : Task.FromResult(createDto.ModelFilePath);
 
-            string? finalPreviewPath = createDto.PreviewModelPath;
-            if (createDto.PreviewModelFile != null && createDto.PreviewModelFile.Length > 0)
-            {
-                finalPreviewPath = await _fileService.SaveFileAsync(createDto.PreviewModelFile, "source-models");
-            }
+            var previewUploadTask = createDto.PreviewModelFile != null && createDto.PreviewModelFile.Length > 0
+                ? _fileService.SaveFileAsync(createDto.PreviewModelFile, "source-models")
+                : Task.FromResult(createDto.PreviewModelPath);
+
+            await Task.WhenAll(imageUploadTask, modelUploadTask, previewUploadTask);
+
+            var finalImageUrl = imageUploadTask.Result;
+            var finalModelPath = modelUploadTask.Result;
+            var finalPreviewPath = previewUploadTask.Result;
 
             var entity = new Product
             {
@@ -196,23 +196,23 @@ namespace Fit3d.BLL.Services
 
             if (entity == null) return null;
 
-            string? finalImageUrl = updateDto.ImageUrl;
-            if (updateDto.ImageFile != null && updateDto.ImageFile.Length > 0)
-            {
-                finalImageUrl = await _fileService.SaveFileAsync(updateDto.ImageFile, "products");
-            }
+            var imageUploadTask = updateDto.ImageFile != null && updateDto.ImageFile.Length > 0
+                ? _fileService.SaveFileAsync(updateDto.ImageFile, "products")
+                : Task.FromResult(updateDto.ImageUrl);
 
-            string? finalModelPath = updateDto.ModelFilePath;
-            if (updateDto.ModelFile != null && updateDto.ModelFile.Length > 0)
-            {
-                finalModelPath = await _fileService.SaveFileAsync(updateDto.ModelFile, "source-models");
-            }
+            var modelUploadTask = updateDto.ModelFile != null && updateDto.ModelFile.Length > 0
+                ? _fileService.SaveFileAsync(updateDto.ModelFile, "source-models")
+                : Task.FromResult(updateDto.ModelFilePath);
 
-            string? finalPreviewPath = updateDto.PreviewModelPath;
-            if (updateDto.PreviewModelFile != null && updateDto.PreviewModelFile.Length > 0)
-            {
-                finalPreviewPath = await _fileService.SaveFileAsync(updateDto.PreviewModelFile, "source-models");
-            }
+            var previewUploadTask = updateDto.PreviewModelFile != null && updateDto.PreviewModelFile.Length > 0
+                ? _fileService.SaveFileAsync(updateDto.PreviewModelFile, "source-models")
+                : Task.FromResult(updateDto.PreviewModelPath);
+
+            await Task.WhenAll(imageUploadTask, modelUploadTask, previewUploadTask);
+
+            var finalImageUrl = imageUploadTask.Result;
+            var finalModelPath = modelUploadTask.Result;
+            var finalPreviewPath = previewUploadTask.Result;
 
             entity.Name = updateDto.Name;
             entity.Description = updateDto.Description;
