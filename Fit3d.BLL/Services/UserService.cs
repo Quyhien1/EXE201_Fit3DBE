@@ -108,6 +108,32 @@ namespace Fit3d.BLL.Services
             return ToDTO(entity);
         }
 
+        public async Task<UserDTO?> UpdateShopProfileAsync(Guid id, UpdateShopProfileDTO updateDto)
+        {
+            var entity = await _repository.GetByIdAsync(id);
+            if (entity == null || entity.IsDeleted) return null;
+
+            if (entity.Role != FIt3d.DAL.Enums.UserRole.Shop)
+            {
+                throw new InvalidOperationException("Only shop accounts can update shop profile.");
+            }
+
+            var trimmedShopName = updateDto.ShopName?.Trim();
+            if (string.IsNullOrWhiteSpace(trimmedShopName))
+            {
+                throw new ArgumentException("Shop name is required.");
+            }
+
+            entity.ShopName = trimmedShopName;
+            entity.ShopDescription = updateDto.ShopDescription?.Trim();
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            _repository.UpdateAsync(entity);
+            await _unitOfWork.SaveChangesAsync();
+
+            return ToDTO(entity);
+        }
+
         public async Task<bool> DeleteAsync(Guid id)
         {
             var entity = await _repository.GetByIdAsync(id);

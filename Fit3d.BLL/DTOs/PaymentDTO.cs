@@ -17,10 +17,6 @@ namespace Fit3d.BLL.DTOs
         public PlanType PlanType { get; set; }
 
         public Guid SubscriptionPlanId { get; set; }
-
-        public string? ShopName { get; set; }
-
-        public string? ShopDescription { get; set; }
     }
 
     public class PaymentTrackingResponse

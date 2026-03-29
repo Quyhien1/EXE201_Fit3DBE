@@ -80,4 +80,14 @@ namespace Fit3d.BLL.DTOs
         [MinLength(6)]
         public string NewPassword { get; set; } = string.Empty;
     }
+
+    public class UpdateShopProfileDTO
+    {
+        [Required]
+        [MaxLength(200)]
+        public string ShopName { get; set; } = string.Empty;
+
+        [MaxLength(500)]
+        public string? ShopDescription { get; set; }
+    }
 }
