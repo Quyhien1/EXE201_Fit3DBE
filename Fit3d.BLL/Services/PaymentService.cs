@@ -401,18 +401,52 @@ namespace Fit3d.BLL.Services
                         (!string.IsNullOrWhiteSpace(subscription.PaymentTransactionId) && t.PaymentLinkId == subscription.PaymentTransactionId));
 
                 var plan = subscription.SubscriptionPlan;
-                var durationInDays = plan.DurationInDays;
+                var isStarterShopPlan = IsStarterShopPlan(plan);
+                var durationInDays = isStarterShopPlan ? 30 : plan.DurationInDays;
+                var now = DateTime.UtcNow;
+                var newEndDate = now.AddDays(durationInDays);
+
+                if (isStarterShopPlan)
+                {
+                    var activeStarterSubscriptions = await _unitOfWork.GetRepository<Subscription>()
+                        .GetListAsync(
+                            predicate: s =>
+                                s.UserId == subscription.UserId &&
+                                s.Id != subscription.Id &&
+                                s.Status == SubscriptionStatus.Active &&
+                                s.EndDate >= now,
+                            include: x => x.Include(s => s.SubscriptionPlan));
+
+                    var validStarterSubscriptions = activeStarterSubscriptions
+                        .Where(s => s.SubscriptionPlan != null && IsStarterShopPlan(s.SubscriptionPlan))
+                        .ToList();
+
+                    if (validStarterSubscriptions.Count > 0)
+                    {
+                        var latestEndDate = validStarterSubscriptions.Max(s => s.EndDate);
+                        newEndDate = latestEndDate.AddDays(durationInDays);
+
+                        foreach (var activeSubscription in validStarterSubscriptions)
+                        {
+                            activeSubscription.SubscriptionPlan = null!;
+                            activeSubscription.Status = SubscriptionStatus.Expired;
+                            activeSubscription.UpdatedAt = now;
+                            _unitOfWork.GetRepository<Subscription>().UpdateAsync(activeSubscription);
+                        }
+                    }
+                }
+
                 subscription.SubscriptionPlan = null!;
                 subscription.Status = SubscriptionStatus.Active;
-                subscription.StartDate = DateTime.UtcNow;
-                subscription.EndDate = DateTime.UtcNow.AddDays(durationInDays);
-                subscription.UpdatedAt = DateTime.UtcNow;
+                subscription.StartDate = now;
+                subscription.EndDate = newEndDate;
+                subscription.UpdatedAt = now;
 
                 if (subscription.User != null &&
-                    plan.PlanType == PlanType.B2B_Shop)
+                    isStarterShopPlan)
                 {
                     subscription.User.Role = UserRole.Shop;
-                    subscription.User.UpdatedAt = DateTime.UtcNow;
+                    subscription.User.UpdatedAt = now;
                     _unitOfWork.GetRepository<User>().UpdateAsync(subscription.User);
                 }
 
