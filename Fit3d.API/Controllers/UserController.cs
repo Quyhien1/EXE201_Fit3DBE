@@ -54,6 +54,25 @@ namespace Fit3d.API.Controllers
             return Ok(result);
         }
 
+        [HttpPut("{id}/shop-profile")]
+        public async Task<IActionResult> UpdateShopProfile(Guid id, [FromBody] UpdateShopProfileDTO updateDto)
+        {
+            try
+            {
+                var result = await _service.UpdateShopProfileAsync(id, updateDto);
+                if (result == null) return NotFound();
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
