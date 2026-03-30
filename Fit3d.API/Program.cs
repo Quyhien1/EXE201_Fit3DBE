@@ -47,6 +47,7 @@ builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<OtpRefreshJob>();
+builder.Services.AddScoped<StarterSubscriptionLifecycleJob>();
 
 // Gộp cả AI và Payment vào chung
 builder.Services.AddScoped<IAIUsageLogService, AIUsageLogService>();
@@ -186,6 +187,11 @@ RecurringJob.AddOrUpdate<OtpRefreshJob>(
     recurringJobId: "refresh-otp-for-all-accounts",
     methodCall: job => job.RefreshOtpsAsync(),
     cronExpression: Cron.Minutely);
+
+RecurringJob.AddOrUpdate<StarterSubscriptionLifecycleJob>(
+    recurringJobId: "starter-subscription-lifecycle",
+    methodCall: job => job.ProcessStarterSubscriptionLifecycleAsync(),
+    cronExpression: Cron.Daily(0, 10));
 
 var provider = new FileExtensionContentTypeProvider();
 provider.Mappings[".glb"] = "model/gltf-binary";

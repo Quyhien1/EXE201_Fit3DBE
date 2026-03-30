@@ -66,6 +66,11 @@ namespace FIt3d.DAL.Entities
         /// </summary>
         public bool AutoRenew { get; set; } = false;
 
+        /// <summary>
+        /// Th?i ?i?m ?ã g?i email nh? h?t h?n (D-3), null n?u ch?a g?i
+        /// </summary>
+        public DateTime? ExpiryWarningSentAt { get; set; }
+
         // Navigation properties
         public virtual User User { get; set; } = null!;
         public virtual SubscriptionPlan SubscriptionPlan { get; set; } = null!;
@@ -74,3 +79,4 @@ namespace FIt3d.DAL.Entities
     }
 
     }
+

@@ -361,9 +361,7 @@ namespace Fit3d.BLL.Services
             var subscription = await _unitOfWork.GetRepository<Subscription>()
                 .SingleOrDefaultAsync(
                     predicate: s => s.Id == subscriptionId,
-                    include: x => x
-                        .Include(s => s.SubscriptionPlan)
-                        .Include(s => s.User)
+                    include: x => x.Include(s => s.SubscriptionPlan)
                 );
 
             if (subscription == null)
@@ -372,18 +370,16 @@ namespace Fit3d.BLL.Services
                 return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy gói subscription!" };
             }
 
+            if (subscription.Status == SubscriptionStatus.Pending)
+            {
+                return new ServiceResponse
+                {
+                    Succeeded = true,
+                    Message = "Đã nhận return URL. Đang chờ payOS xác nhận qua webhook để kích hoạt subscription."
+                };
+            }
+
             if (subscription.Status == SubscriptionStatus.Active)
-            {
-                return new ServiceResponse { Succeeded = true, Message = "Subscription đã được kích hoạt trước đó." };
-            }
-
-            if (subscription.Status != SubscriptionStatus.Pending)
-            {
-                _logger.LogError("Subscription status not valid: {SubscriptionId}", subscriptionId);
-                return new ServiceResponse { Succeeded = false, Message = "Trạng thái subscription không hợp lệ!" };
-            }
-
-            try
             {
                 var subscriptionTransaction = await _unitOfWork.GetRepository<PaymentTransaction>()
                     .SingleOrDefaultAsync(predicate: t =>
@@ -391,55 +387,75 @@ namespace Fit3d.BLL.Services
                         (!string.IsNullOrWhiteSpace(subscription.PaymentTransactionId) && t.PaymentLinkId == subscription.PaymentTransactionId));
 
                 var plan = subscription.SubscriptionPlan;
-                var durationInDays = plan.DurationInDays;
+                var isStarterShopPlan = IsStarterShopPlan(plan);
+                var durationInDays = isStarterShopPlan ? 30 : plan.DurationInDays;
+                var now = DateTime.UtcNow;
+                var newEndDate = now.AddDays(durationInDays);
+
+                if (isStarterShopPlan)
+                {
+                    var activeStarterSubscriptions = await _unitOfWork.GetRepository<Subscription>()
+                        .GetListAsync(
+                            predicate: s =>
+                                s.UserId == subscription.UserId &&
+                                s.Id != subscription.Id &&
+                                s.Status == SubscriptionStatus.Active &&
+                                s.EndDate >= now,
+                            include: x => x.Include(s => s.SubscriptionPlan));
+
+                    var validStarterSubscriptions = activeStarterSubscriptions
+                        .Where(s => s.SubscriptionPlan != null && IsStarterShopPlan(s.SubscriptionPlan))
+                        .ToList();
+
+                    if (validStarterSubscriptions.Count > 0)
+                    {
+                        var latestEndDate = validStarterSubscriptions.Max(s => s.EndDate);
+                        newEndDate = latestEndDate.AddDays(durationInDays);
+
+                        foreach (var activeSubscription in validStarterSubscriptions)
+                        {
+                            activeSubscription.SubscriptionPlan = null!;
+                            activeSubscription.Status = SubscriptionStatus.Expired;
+                            activeSubscription.UpdatedAt = now;
+                            _unitOfWork.GetRepository<Subscription>().UpdateAsync(activeSubscription);
+                        }
+                    }
+                }
+
                 subscription.SubscriptionPlan = null!;
                 subscription.Status = SubscriptionStatus.Active;
-                subscription.StartDate = DateTime.UtcNow;
-                subscription.EndDate = DateTime.UtcNow.AddDays(durationInDays);
-                subscription.UpdatedAt = DateTime.UtcNow;
+                subscription.StartDate = now;
+                subscription.EndDate = newEndDate;
+                subscription.UpdatedAt = now;
 
                 if (subscription.User != null &&
-                    plan.PlanType == PlanType.B2B_Shop)
+                    isStarterShopPlan)
                 {
                     subscription.User.Role = UserRole.Shop;
-                    subscription.User.UpdatedAt = DateTime.UtcNow;
+                    subscription.User.UpdatedAt = now;
                     _unitOfWork.GetRepository<User>().UpdateAsync(subscription.User);
                 }
 
-                if (subscriptionTransaction != null)
-                {
-                    subscriptionTransaction.TransactionStatus = TransactionStatus.Return;
-                    _unitOfWork.GetRepository<PaymentTransaction>().UpdateAsync(subscriptionTransaction);
-                }
-
-                _unitOfWork.GetRepository<Subscription>().UpdateAsync(subscription);
-                await _unitOfWork.SaveChangesAsync();
-
-                _logger.LogInformation("Subscription payment return successfully: {SubscriptionId}", subscriptionId);
-                return new ServiceResponse { Succeeded = true, Message = "Thanh toán gói subscription thành công!" };
-            }
-            catch (Exception ex)
+            if (subscription.Status == SubscriptionStatus.Cancelled)
             {
-                var subscriptionTransaction = await _unitOfWork.GetRepository<PaymentTransaction>()
-                    .SingleOrDefaultAsync(predicate: t =>
-                        t.SubscriptionId == subscription.Id ||
-                        (!string.IsNullOrWhiteSpace(subscription.PaymentTransactionId) && t.PaymentLinkId == subscription.PaymentTransactionId));
-
-                subscription.SubscriptionPlan = null!;
-                subscription.Status = SubscriptionStatus.Cancelled;
-                subscription.UpdatedAt = DateTime.UtcNow;
-                _unitOfWork.GetRepository<Subscription>().UpdateAsync(subscription);
-
-                if (subscriptionTransaction != null)
+                return new ServiceResponse
                 {
-                    subscriptionTransaction.TransactionStatus = TransactionStatus.Fail;
-                    _unitOfWork.GetRepository<PaymentTransaction>().UpdateAsync(subscriptionTransaction);
-                }
-
-                await _unitOfWork.SaveChangesAsync();
-                _logger.LogError(ex, "Subscription payment return fail: {SubscriptionId}", subscriptionId);
-                return new ServiceResponse { Succeeded = false, Message = "Thanh toán gói subscription thất bại!" };
+                    Succeeded = true,
+                    Message = "Subscription đã bị hủy."
+                };
             }
+
+            if (subscription.Status == SubscriptionStatus.Expired)
+            {
+                return new ServiceResponse
+                {
+                    Succeeded = true,
+                    Message = "Subscription đã hết hạn."
+                };
+            }
+
+            _logger.LogWarning("Subscription return received with unsupported state {Status}. SubscriptionId: {SubscriptionId}", subscription.Status, subscriptionId);
+            return new ServiceResponse { Succeeded = false, Message = "Trạng thái subscription không hợp lệ!" };
         }
 
         public async Task<ServiceResponse> SubscriptionPaymentCancel(Guid subscriptionId, CancellationToken cancellationToken = default)
@@ -490,6 +506,91 @@ namespace Fit3d.BLL.Services
             {
                 _logger.LogError(ex, "Error cancelling subscription payment: {SubscriptionId}", subscriptionId);
                 return new ServiceResponse { Succeeded = false, Message = "Lỗi khi hủy thanh toán subscription!" };
+            }
+        }
+
+        private async Task<ServiceResponse> ActivateSubscriptionFromWebhook(Guid subscriptionId, CancellationToken cancellationToken)
+        {
+            var subscription = await _unitOfWork.GetRepository<Subscription>()
+                .SingleOrDefaultAsync(
+                    predicate: s => s.Id == subscriptionId,
+                    include: x => x
+                        .Include(s => s.SubscriptionPlan)
+                        .Include(s => s.User)
+                );
+
+            if (subscription == null)
+            {
+                _logger.LogError("Subscription not found during webhook finalization: {SubscriptionId}", subscriptionId);
+                return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy gói subscription!" };
+            }
+
+            if (subscription.Status == SubscriptionStatus.Active)
+            {
+                return new ServiceResponse { Succeeded = true, Message = "Subscription đã được kích hoạt trước đó." };
+            }
+
+            if (subscription.Status != SubscriptionStatus.Pending)
+            {
+                _logger.LogError("Subscription status not valid for webhook finalization: {SubscriptionId}", subscriptionId);
+                return new ServiceResponse { Succeeded = false, Message = "Trạng thái subscription không hợp lệ!" };
+            }
+
+            try
+            {
+                var subscriptionTransaction = await _unitOfWork.GetRepository<PaymentTransaction>()
+                    .SingleOrDefaultAsync(predicate: t =>
+                        t.SubscriptionId == subscription.Id ||
+                        (!string.IsNullOrWhiteSpace(subscription.PaymentTransactionId) && t.PaymentLinkId == subscription.PaymentTransactionId));
+
+                var plan = subscription.SubscriptionPlan;
+                var durationInDays = plan.DurationInDays;
+                subscription.SubscriptionPlan = null!;
+                subscription.Status = SubscriptionStatus.Active;
+                subscription.StartDate = DateTime.UtcNow;
+                subscription.EndDate = DateTime.UtcNow.AddDays(durationInDays);
+                subscription.UpdatedAt = DateTime.UtcNow;
+
+                if (subscription.User != null && IsStarterShopPlan(plan))
+                {
+                    subscription.User.Role = UserRole.Shop;
+                    subscription.User.UpdatedAt = DateTime.UtcNow;
+                    _unitOfWork.GetRepository<User>().UpdateAsync(subscription.User);
+                }
+
+                if (subscriptionTransaction != null)
+                {
+                    subscriptionTransaction.TransactionStatus = TransactionStatus.Return;
+                    _unitOfWork.GetRepository<PaymentTransaction>().UpdateAsync(subscriptionTransaction);
+                }
+
+                _unitOfWork.GetRepository<Subscription>().UpdateAsync(subscription);
+                await _unitOfWork.SaveChangesAsync();
+
+                _logger.LogInformation("Subscription activated via webhook successfully: {SubscriptionId}", subscriptionId);
+                return new ServiceResponse { Succeeded = true, Message = "Thanh toán gói subscription thành công!" };
+            }
+            catch (Exception ex)
+            {
+                var subscriptionTransaction = await _unitOfWork.GetRepository<PaymentTransaction>()
+                    .SingleOrDefaultAsync(predicate: t =>
+                        t.SubscriptionId == subscription.Id ||
+                        (!string.IsNullOrWhiteSpace(subscription.PaymentTransactionId) && t.PaymentLinkId == subscription.PaymentTransactionId));
+
+                subscription.SubscriptionPlan = null!;
+                subscription.Status = SubscriptionStatus.Cancelled;
+                subscription.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.GetRepository<Subscription>().UpdateAsync(subscription);
+
+                if (subscriptionTransaction != null)
+                {
+                    subscriptionTransaction.TransactionStatus = TransactionStatus.Fail;
+                    _unitOfWork.GetRepository<PaymentTransaction>().UpdateAsync(subscriptionTransaction);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                _logger.LogError(ex, "Webhook finalization failed for subscription: {SubscriptionId}", subscriptionId);
+                return new ServiceResponse { Succeeded = false, Message = "Thanh toán gói subscription thất bại!" };
             }
         }
 
@@ -596,7 +697,7 @@ namespace Fit3d.BLL.Services
                 if (target.Subscription != null)
                 {
                     return isSuccessfulPayment
-                        ? await SubscriptionPaymentReturn(target.Subscription.Id, cancellationToken)
+                        ? await ActivateSubscriptionFromWebhook(target.Subscription.Id, cancellationToken)
                         : await SubscriptionPaymentCancel(target.Subscription.Id, cancellationToken);
                 }
 
@@ -753,13 +854,14 @@ namespace Fit3d.BLL.Services
             {
                 SubscriptionStatus.Active => "PAID",
                 SubscriptionStatus.Cancelled => "CANCELLED",
+                SubscriptionStatus.Expired => "EXPIRED",
                 _ => "PENDING"
             };
 
             return new PaymentTrackingResponse
             {
                 Success = status == "PAID",
-                IsFinal = status is "PAID" or "CANCELLED",
+                IsFinal = status is "PAID" or "CANCELLED" or "EXPIRED",
                 Status = status,
                 Type = "subscription",
                 SubscriptionId = subscription.Id,
@@ -769,6 +871,7 @@ namespace Fit3d.BLL.Services
                 {
                     "PAID" => "Gói subscription đã được kích hoạt.",
                     "CANCELLED" => "Thanh toán subscription đã bị hủy.",
+                    "EXPIRED" => "Gói subscription đã hết hạn.",
                     _ => "Đang chờ payOS xác nhận subscription qua webhook."
                 }
             };
