@@ -13,6 +13,7 @@ namespace Fit3d.BLL.Interfaces
         Task<UserDTO?> GetByIdAsync(Guid id);
         Task<UserDTO> CreateAsync(CreateUserDTO createDto);
         Task<UserDTO?> UpdateAsync(Guid id, UpdateUserDTO updateDto);
+        Task<UserDTO?> UpdateShopProfileAsync(Guid id, UpdateShopProfileDTO updateDto);
         Task<bool> DeleteAsync(Guid id);
         Task<bool> ChangePasswordAsync(Guid id, ChangePasswordDTO changePasswordDto);
     }

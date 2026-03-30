@@ -289,16 +289,6 @@ namespace Fit3d.BLL.Services
                     return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy người dùng!" };
                 }
 
-                if (!IsStarterShopPlan(plan) &&
-                    (!string.IsNullOrWhiteSpace(request.ShopName) || !string.IsNullOrWhiteSpace(request.ShopDescription)))
-                {
-                    return new ServiceResponse
-                    {
-                        Succeeded = false,
-                        Message = "Chỉ gói Starter Pack mới được phép gửi thông tin shop."
-                    };
-                }
-
                 var subscription = new Subscription
                 {
                     UserId = request.UserId,
@@ -391,12 +381,60 @@ namespace Fit3d.BLL.Services
 
             if (subscription.Status == SubscriptionStatus.Active)
             {
-                return new ServiceResponse
+                var subscriptionTransaction = await _unitOfWork.GetRepository<PaymentTransaction>()
+                    .SingleOrDefaultAsync(predicate: t =>
+                        t.SubscriptionId == subscription.Id ||
+                        (!string.IsNullOrWhiteSpace(subscription.PaymentTransactionId) && t.PaymentLinkId == subscription.PaymentTransactionId));
+
+                var plan = subscription.SubscriptionPlan;
+                var isStarterShopPlan = IsStarterShopPlan(plan);
+                var durationInDays = isStarterShopPlan ? 30 : plan.DurationInDays;
+                var now = DateTime.UtcNow;
+                var newEndDate = now.AddDays(durationInDays);
+
+                if (isStarterShopPlan)
                 {
-                    Succeeded = true,
-                    Message = "Subscription đã được kích hoạt qua webhook trước đó."
-                };
-            }
+                    var activeStarterSubscriptions = await _unitOfWork.GetRepository<Subscription>()
+                        .GetListAsync(
+                            predicate: s =>
+                                s.UserId == subscription.UserId &&
+                                s.Id != subscription.Id &&
+                                s.Status == SubscriptionStatus.Active &&
+                                s.EndDate >= now,
+                            include: x => x.Include(s => s.SubscriptionPlan));
+
+                    var validStarterSubscriptions = activeStarterSubscriptions
+                        .Where(s => s.SubscriptionPlan != null && IsStarterShopPlan(s.SubscriptionPlan))
+                        .ToList();
+
+                    if (validStarterSubscriptions.Count > 0)
+                    {
+                        var latestEndDate = validStarterSubscriptions.Max(s => s.EndDate);
+                        newEndDate = latestEndDate.AddDays(durationInDays);
+
+                        foreach (var activeSubscription in validStarterSubscriptions)
+                        {
+                            activeSubscription.SubscriptionPlan = null!;
+                            activeSubscription.Status = SubscriptionStatus.Expired;
+                            activeSubscription.UpdatedAt = now;
+                            _unitOfWork.GetRepository<Subscription>().UpdateAsync(activeSubscription);
+                        }
+                    }
+                }
+
+                subscription.SubscriptionPlan = null!;
+                subscription.Status = SubscriptionStatus.Active;
+                subscription.StartDate = now;
+                subscription.EndDate = newEndDate;
+                subscription.UpdatedAt = now;
+
+                if (subscription.User != null &&
+                    isStarterShopPlan)
+                {
+                    subscription.User.Role = UserRole.Shop;
+                    subscription.User.UpdatedAt = now;
+                    _unitOfWork.GetRepository<User>().UpdateAsync(subscription.User);
+                }
 
             if (subscription.Status == SubscriptionStatus.Cancelled)
             {
@@ -469,16 +507,6 @@ namespace Fit3d.BLL.Services
                 _logger.LogError(ex, "Error cancelling subscription payment: {SubscriptionId}", subscriptionId);
                 return new ServiceResponse { Succeeded = false, Message = "Lỗi khi hủy thanh toán subscription!" };
             }
-        }
-
-        private static bool IsStarterShopPlan(SubscriptionPlan plan)
-        {
-            if (plan.PlanType != PlanType.B2B_Shop)
-            {
-                return false;
-            }
-
-            return (plan.Name?.Trim().Contains("starter", StringComparison.OrdinalIgnoreCase)).GetValueOrDefault();
         }
 
         private async Task<ServiceResponse> ActivateSubscriptionFromWebhook(Guid subscriptionId, CancellationToken cancellationToken)
