@@ -289,16 +289,6 @@ namespace Fit3d.BLL.Services
                     return new ServiceResponse { Succeeded = false, Message = "Không tìm thấy người dùng!" };
                 }
 
-                if (!IsStarterShopPlan(plan) &&
-                    (!string.IsNullOrWhiteSpace(request.ShopName) || !string.IsNullOrWhiteSpace(request.ShopDescription)))
-                {
-                    return new ServiceResponse
-                    {
-                        Succeeded = false,
-                        Message = "Chỉ gói Starter Pack mới được phép gửi thông tin shop."
-                    };
-                }
-
                 var subscription = new Subscription
                 {
                     UserId = request.UserId,
@@ -535,16 +525,6 @@ namespace Fit3d.BLL.Services
                 _logger.LogError(ex, "Error cancelling subscription payment: {SubscriptionId}", subscriptionId);
                 return new ServiceResponse { Succeeded = false, Message = "Lỗi khi hủy thanh toán subscription!" };
             }
-        }
-
-        private static bool IsStarterShopPlan(SubscriptionPlan plan)
-        {
-            if (plan.PlanType != PlanType.B2B_Shop)
-            {
-                return false;
-            }
-
-            return (plan.Name?.Trim().Contains("starter", StringComparison.OrdinalIgnoreCase)).GetValueOrDefault();
         }
 
         public async Task<ResponseData<PaymentTrackingResponse>> GetPaymentTrackingStatus(
